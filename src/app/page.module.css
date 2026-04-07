@@ -11,15 +11,28 @@
   background: #12090d;
 }
 
+.sceneBackdropVideo,
 .sceneBackdrop {
   position: absolute;
   inset: 0;
   z-index: 0;
+}
+
+.sceneBackdropVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.02);
+  filter: saturate(1.06) contrast(1.04) brightness(0.82);
+  pointer-events: none;
+}
+
+.sceneBackdrop {
+  background: linear-gradient(180deg, rgba(14, 8, 9, 0.18), rgba(7, 8, 16, 0.28));
   background-position: center center;
   background-repeat: no-repeat;
   background-size: cover;
-  transform: scale(1.02);
-  filter: saturate(1.06) contrast(1.04) brightness(0.82);
+  pointer-events: none;
 }
 
 .sceneCanvas,
@@ -151,24 +164,62 @@
 }
 
 .miniMapCard {
-  flex: 1 1 360px;
-  min-width: min(420px, 100%);
-  gap: 12px;
-  align-items: center;
-  grid-template-columns: minmax(0, 1fr) auto;
+  flex: 1 1 320px;
+  min-width: min(360px, 100%);
+  gap: 10px;
+  padding: 14px 16px;
 }
 
-.miniMapPanel {
+.miniMapHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.miniMapProgressBadge,
+.miniMapGoalBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.miniMapProgressBadge {
+  color: #f8fafc;
+  background: rgba(14, 116, 144, 0.42);
+  border: 1px solid rgba(103, 232, 249, 0.22);
+}
+
+.miniMapGoalBadge {
+  color: rgba(226, 232, 240, 0.88);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.miniMapTrackRow {
   display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
   gap: 10px;
+}
+
+.miniMapEdgeLabel {
+  font-size: 0.74rem;
+  color: rgba(226, 232, 240, 0.56);
 }
 
 .miniMapTrack {
   position: relative;
   overflow: hidden;
   width: 100%;
-  height: 16px;
-  border-radius: 18px;
+  height: 10px;
+  border-radius: 999px;
   background:
     linear-gradient(180deg, rgba(125, 211, 252, 0.1), rgba(30, 41, 59, 0.22)),
     rgba(15, 23, 42, 0.46);
@@ -184,41 +235,50 @@
 .miniMapMarker {
   position: absolute;
   top: 50%;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 999px;
   background: #f8fafc;
-  border: 3px solid #f59e0b;
-  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.16);
+  border: 2px solid #f59e0b;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16);
   transform: translate(-50%, -50%);
 }
 
-.miniMapLegend {
+.miniMapFooter {
   display: flex;
-  flex-wrap: wrap;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 8px;
-  font-size: 0.78rem;
-  color: rgba(226, 232, 240, 0.66);
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .distanceDisplay {
   display: grid;
-  align-content: center;
+  gap: 4px;
+}
+
+.distanceLabel {
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  color: rgba(226, 232, 240, 0.62);
+}
+
+.distanceValue {
+  font-size: clamp(1.2rem, 2.5vw, 1.7rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: #f8fafc;
+}
+
+.miniMapSummary {
+  display: grid;
   justify-items: end;
   gap: 6px;
 }
 
-.distanceValue {
-  font-size: clamp(2rem, 4vw, 3rem);
-  line-height: 1;
-  letter-spacing: -0.06em;
-  color: #f8fafc;
-}
-
 .distanceSub {
-  font-size: 0.88rem;
-  color: rgba(226, 232, 240, 0.68);
+  font-size: 0.78rem;
+  color: rgba(226, 232, 240, 0.64);
 }
 
 .metricCardActive {
@@ -622,15 +682,15 @@
   .miniMapCard {
     width: 100%;
     min-width: 0;
-    grid-template-columns: 1fr;
   }
 
-  .distanceDisplay {
+  .miniMapHeader,
+  .miniMapFooter {
+    align-items: flex-start;
+  }
+
+  .miniMapSummary {
     justify-items: flex-start;
-  }
-
-  .miniMapLegend {
-    justify-content: flex-start;
   }
 
   .hpCard,

@@ -111,6 +111,10 @@ const PLAYER_POSE_HOLD_MS = 360;
 const PLAYER_DAMAGE_COOLDOWN_MS = 280;
 const PLAYER_HIT_FLASH_MS = 200;
 const PLAYER_MAX_HP = 100;
+const PLAYER_TORSO_ALPHA = 0.3;
+const PLAYER_HEAD_ALPHA = 0.3;
+const PLAYER_ARM_ALPHA = 0.5;
+const PLAYER_HAND_ALPHA = 1;
 const BEER_DAMAGE = 8;
 const BEER_START_DELAY_MS = 5000;
 const BASE_SCENE_OBJECT_COUNT = 14;
@@ -137,7 +141,7 @@ const MEDIAPIPE_WASM_PATH = withBasePath("/mediapipe/wasm");
 const FACE_LANDMARKER_MODEL_PATH = withBasePath("/models/face_landmarker.task");
 const HAND_LANDMARKER_MODEL_PATH = withBasePath("/models/hand_landmarker.task");
 const BEER_SPRITE_PATH = withBasePath("/images/beer-stein.svg");
-const SCENE_BACKDROP_PATH = withBasePath("/images/oktoberfest-hall.svg");
+const BACKDROP_VIDEO_PATH = withBasePath("/bg.mp4");
 const SCENE_LANE_X = [-0.52, -0.34, -0.18, -0.06, 0.06, 0.18, 0.34, 0.52];
 const SCENE_LANE_Y = [-0.28, -0.12, 0.02, 0.18, 0.3];
 const SCENE_OBJECT_HALO_OFFSET_Y_RATIO = -0.3;
@@ -1350,6 +1354,8 @@ function drawPlayerOverlay(
     context.shadowBlur = 22;
   }
 
+  context.save();
+  context.globalAlpha = PLAYER_ARM_ALPHA;
   for (const arm of [playerPose.arms.left, playerPose.arms.right]) {
     drawLine(
       context,
@@ -1382,7 +1388,10 @@ function drawPlayerOverlay(
     drawPoint(context, arm.shoulder, jacketTrim, head.radius * 0.11);
     drawPoint(context, arm.elbow, jacketTrim, head.radius * 0.1);
   }
+  context.restore();
 
+  context.save();
+  context.globalAlpha = PLAYER_TORSO_ALPHA;
   context.fillStyle = jacketColor;
   context.strokeStyle = jacketTrim;
   context.lineWidth = Math.max(3, head.radius * 0.08);
@@ -1423,7 +1432,10 @@ function drawPlayerOverlay(
     neck.width * 0.36,
   );
   context.fill();
+  context.restore();
 
+  context.save();
+  context.globalAlpha = PLAYER_HEAD_ALPHA;
   context.fillStyle = hairColor;
   context.beginPath();
   context.ellipse(
@@ -1461,6 +1473,7 @@ function drawPlayerOverlay(
     Math.PI * 1.92,
   );
   context.stroke();
+  context.restore();
 
   if (gameMode === "hard") {
     drawBeerCup(
@@ -1483,6 +1496,8 @@ function drawPlayerOverlay(
     );
   }
 
+  context.save();
+  context.globalAlpha = PLAYER_HAND_ALPHA;
   for (const arm of [playerPose.arms.left, playerPose.arms.right]) {
     context.save();
     context.translate(arm.hand.x, arm.hand.y);
@@ -1504,6 +1519,7 @@ function drawPlayerOverlay(
     context.stroke();
     context.restore();
   }
+  context.restore();
 
   context.restore();
 
@@ -1636,6 +1652,7 @@ function doesProjectionHitPlayer(
 
 export default function Home() {
   const stageRef = useRef<HTMLElement>(null);
+  const backdropVideoRef = useRef<HTMLVideoElement>(null);
   const sceneCanvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const analysisCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -1809,6 +1826,26 @@ export default function Home() {
     setHardModeResult(null);
   };
 
+  const syncBackdropPlayback = (shouldPlay: boolean) => {
+    const backdropVideo = backdropVideoRef.current;
+
+    if (!backdropVideo) {
+      return;
+    }
+
+    if (shouldPlay) {
+      if (backdropVideo.paused) {
+        void backdropVideo.play().catch(() => undefined);
+      }
+
+      return;
+    }
+
+    if (!backdropVideo.paused) {
+      backdropVideo.pause();
+    }
+  };
+
   const publishCupFillState = (nextCupFill: CupFillState) => {
     cupFillRef.current = nextCupFill;
 
@@ -1838,6 +1875,7 @@ export default function Home() {
     lastSceneFrameRef.current = 0;
     motionDetectedRef.current = false;
     changedPixelRatioRef.current = 0;
+    syncBackdropPlayback(false);
     sceneObjectsRef.current = createSceneObjects(
       getSceneObjectCount(beerDensityRef.current),
       "staggered",
@@ -1992,6 +2030,7 @@ export default function Home() {
     lastSceneFrameRef.current = 0;
     motionDetectedRef.current = false;
     changedPixelRatioRef.current = 0;
+    syncBackdropPlayback(false);
     sceneObjectsRef.current = createSceneObjects(
       getSceneObjectCount(beerDensityRef.current),
       "staggered",
@@ -2162,6 +2201,7 @@ export default function Home() {
 
     if (isActive !== motionDetectedRef.current) {
       motionDetectedRef.current = isActive;
+      syncBackdropPlayback(isActive && !gameWonRef.current && !gameOverRef.current);
     }
 
     previousFrameRef.current = currentFrame;
@@ -2219,6 +2259,7 @@ export default function Home() {
         nextElapsedMs >= goalDurationMs
       ) {
         gameWonRef.current = true;
+        syncBackdropPlayback(false);
         setGameWon(true);
 
         if (gameModeRef.current === "hard") {
@@ -2286,6 +2327,7 @@ export default function Home() {
 
         if (getCombinedCupFill(nextCupFill) <= 0.01) {
           gameOverRef.current = true;
+          syncBackdropPlayback(false);
           setGameOver(true);
         }
       }
@@ -2426,6 +2468,7 @@ export default function Home() {
       lastSceneFrameRef.current = 0;
       motionDetectedRef.current = false;
       changedPixelRatioRef.current = 0;
+      syncBackdropPlayback(false);
       analysisActiveRef.current = true;
       sceneObjectsRef.current = createSceneObjects(
         getSceneObjectCount(beerDensityRef.current),
@@ -2525,17 +2568,24 @@ export default function Home() {
   const distanceProgressRatio = clamp(activeElapsedMs / Math.max(goalDurationMs, 1), 0, 1);
   const distanceProgressPercent = Math.round(distanceProgressRatio * 100);
   const currentCoordinateLabel = `x = ${distanceValue}`;
+  const remainingDistanceValue = formatDistanceMeters(
+    Math.max(goalDurationMs - activeElapsedMs, 0),
+  );
 
   return (
     <main className={styles.page}>
       <section ref={stageRef} className={styles.stage}>
-        <div
-          className={styles.sceneBackdrop}
-          style={{
-            backgroundImage: `linear-gradient(180deg, rgba(14, 8, 9, 0.18), rgba(7, 8, 16, 0.28)), url("${SCENE_BACKDROP_PATH}")`,
-          }}
+        <video
+          ref={backdropVideoRef}
+          className={styles.sceneBackdropVideo}
+          src={BACKDROP_VIDEO_PATH}
+          loop
+          muted
+          playsInline
+          preload="auto"
           aria-hidden="true"
         />
+        <div className={styles.sceneBackdrop} aria-hidden="true" />
         <canvas ref={sceneCanvasRef} className={styles.sceneCanvas} aria-hidden="true" />
         <video ref={videoRef} className={styles.cameraFeed} autoPlay muted playsInline />
         <canvas
@@ -2545,8 +2595,14 @@ export default function Home() {
         />
         <div className={styles.hudTop}>
           <div className={`${styles.metricCard} ${styles.miniMapCard}`}>
-            <div className={styles.miniMapPanel}>
-              <span className={styles.metricLabel}>이동 미니맵 / 목표 {goalDistanceMeters}m</span>
+            <div className={styles.miniMapHeader}>
+              <span className={styles.metricLabel}>이동 미니맵</span>
+              <span className={styles.miniMapProgressBadge}>
+                진행 {distanceProgressPercent}%
+              </span>
+            </div>
+            <div className={styles.miniMapTrackRow}>
+              <span className={styles.miniMapEdgeLabel}>0m</span>
               <div className={styles.miniMapTrack} aria-hidden="true">
                 <div
                   className={styles.miniMapFill}
@@ -2557,16 +2613,17 @@ export default function Home() {
                   style={{ left: `${(distanceProgressRatio * 100).toFixed(1)}%` }}
                 />
               </div>
-              <div className={styles.miniMapLegend}>
-                <span>출발 0m</span>
-                <span>진행 {distanceProgressPercent}%</span>
-                <span>도착 {goalDistanceMeters}m</span>
-              </div>
+              <span className={styles.miniMapEdgeLabel}>{goalDistanceMeters}m</span>
             </div>
-            <div className={styles.distanceDisplay}>
-              <span className={styles.metricLabel}>현재 좌표</span>
-              <strong className={styles.distanceValue}>{currentCoordinateLabel}</strong>
-              <span className={styles.distanceSub}>{distanceValue}</span>
+            <div className={styles.miniMapFooter}>
+              <div className={styles.distanceDisplay}>
+                <span className={styles.distanceLabel}>현재 좌표</span>
+                <strong className={styles.distanceValue}>{currentCoordinateLabel}</strong>
+              </div>
+              <div className={styles.miniMapSummary}>
+                <span className={styles.miniMapGoalBadge}>목표 {goalDistanceMeters}m</span>
+                <span className={styles.distanceSub}>남은 {remainingDistanceValue}</span>
+              </div>
             </div>
           </div>
           <div
