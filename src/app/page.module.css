@@ -8,25 +8,30 @@
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background:
-    radial-gradient(circle at top, rgba(14, 165, 233, 0.16), transparent 32%),
-    radial-gradient(circle at 80% 20%, rgba(249, 115, 22, 0.14), transparent 24%),
-    #020617;
+  background: #12090d;
 }
 
-.video,
+.sceneBackdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  transform: scale(1.02);
+  filter: saturate(1.06) contrast(1.04) brightness(0.82);
+}
+
+.sceneCanvas,
 .overlayCanvas {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  transform: scaleX(-1);
 }
 
-.video {
+.sceneCanvas {
   z-index: 1;
-  transform: none;
 }
 
 .cameraFeed {
@@ -58,25 +63,78 @@
 
 .hudTop {
   top: 0;
-  justify-content: flex-start;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px;
   padding: 24px;
 }
 
 .hudBottom {
   bottom: 0;
   justify-content: center;
-  padding: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 24px 24px 92px;
 }
 
 .metricCard,
+.hpCard,
+.beerCard,
 .sliderCard {
   pointer-events: auto;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(2, 6, 23, 0.55);
+  background: rgba(2, 6, 23, 0.5);
   backdrop-filter: blur(20px);
   box-shadow:
-    0 24px 70px rgba(2, 6, 23, 0.45),
+    0 24px 70px rgba(2, 6, 23, 0.42),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.modeSwitch {
+  flex: 1 1 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: fit-content;
+  margin: 0 auto;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  pointer-events: auto;
+  background: rgba(2, 6, 23, 0.56);
+  backdrop-filter: blur(20px);
+  box-shadow:
+    0 24px 70px rgba(2, 6, 23, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.modeButton {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 18px;
+  background: transparent;
+  color: rgba(226, 232, 240, 0.7);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.modeButton:hover {
+  color: #f8fafc;
+}
+
+.modeButtonActive {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.92), rgba(56, 189, 248, 0.88));
+  color: #082032;
+  transform: translateY(-1px);
 }
 
 .metricCard {
@@ -92,10 +150,115 @@
     background-color 160ms ease;
 }
 
+.miniMapCard {
+  flex: 1 1 360px;
+  min-width: min(420px, 100%);
+  gap: 12px;
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.miniMapPanel {
+  display: grid;
+  gap: 10px;
+}
+
+.miniMapTrack {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: 16px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(125, 211, 252, 0.1), rgba(30, 41, 59, 0.22)),
+    rgba(15, 23, 42, 0.46);
+}
+
+.miniMapFill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background: linear-gradient(90deg, #38bdf8 0%, #f59e0b 100%);
+}
+
+.miniMapMarker {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 3px solid #f59e0b;
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.16);
+  transform: translate(-50%, -50%);
+}
+
+.miniMapLegend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: rgba(226, 232, 240, 0.66);
+}
+
+.distanceDisplay {
+  display: grid;
+  align-content: center;
+  justify-items: end;
+  gap: 6px;
+}
+
+.distanceValue {
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1;
+  letter-spacing: -0.06em;
+  color: #f8fafc;
+}
+
+.distanceSub {
+  font-size: 0.88rem;
+  color: rgba(226, 232, 240, 0.68);
+}
+
 .metricCardActive {
   border-color: rgba(45, 212, 191, 0.45);
-  background: rgba(8, 47, 73, 0.6);
+  background: rgba(8, 47, 73, 0.62);
   transform: translateY(-1px);
+}
+
+.hpCard {
+  min-width: 208px;
+  padding: 16px 18px;
+  border-radius: 22px;
+  display: grid;
+  gap: 12px;
+  color: #e2e8f0;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.beerCard {
+  min-width: 236px;
+  padding: 16px 18px;
+  border-radius: 22px;
+  display: grid;
+  gap: 12px;
+  color: #e2e8f0;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.hpCardDanger {
+  border-color: rgba(248, 113, 113, 0.5);
+  background: rgba(69, 10, 10, 0.58);
+}
+
+.beerCardDanger {
+  border-color: rgba(251, 191, 36, 0.5);
+  background: rgba(69, 26, 3, 0.62);
 }
 
 .metricLabel,
@@ -113,6 +276,105 @@
   color: #f8fafc;
 }
 
+.hpHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hpValue {
+  font-size: 1.35rem;
+  color: #f8fafc;
+}
+
+.hpBar {
+  position: relative;
+  overflow: hidden;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.hpFill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background: linear-gradient(90deg, #fb7185 0%, #f59e0b 48%, #22c55e 100%);
+}
+
+.beerSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.beerTuningRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.beerTuningLabel {
+  font-size: 0.8rem;
+  color: rgba(226, 232, 240, 0.72);
+}
+
+.beerTuningValue {
+  font-size: 1rem;
+  color: #fde68a;
+  text-align: right;
+}
+
+.beerCupGroup {
+  display: grid;
+  gap: 6px;
+}
+
+.beerCupRow {
+  display: grid;
+  grid-template-columns: 48px minmax(96px, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  color: rgba(226, 232, 240, 0.78);
+  font-size: 0.86rem;
+}
+
+.beerTrack {
+  position: relative;
+  overflow: hidden;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.beerLiquid {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background: linear-gradient(90deg, #fde68a 0%, #f59e0b 52%, #b45309 100%);
+}
+
+.beerCupValue {
+  font-size: 0.9rem;
+  color: #f8fafc;
+}
+
+.beerCupMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-left: 58px;
+  font-size: 0.76rem;
+  color: rgba(226, 232, 240, 0.64);
+}
+
 .sliderCard {
   width: min(420px, calc(100vw - 32px));
   padding: 16px 18px 18px;
@@ -128,6 +390,79 @@
   gap: 12px;
 }
 
+.debugCard {
+  gap: 14px;
+}
+
+.debugHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.debugSummary {
+  margin: 6px 0 0;
+  font-size: 0.88rem;
+  color: rgba(226, 232, 240, 0.8);
+}
+
+.debugModeButton,
+.debugToggleButton {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(226, 232, 240, 0.76);
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.debugModeButton:hover,
+.debugToggleButton:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #f8fafc;
+}
+
+.debugModeButton {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.debugModeButtonActive {
+  border-color: rgba(45, 212, 191, 0.42);
+  background: rgba(13, 148, 136, 0.18);
+  color: #ccfbf1;
+}
+
+.debugToggleGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.debugToggleButton {
+  border-radius: 14px;
+  padding: 11px 12px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.debugToggleButtonActive {
+  border-color: rgba(251, 146, 60, 0.42);
+  background: rgba(249, 115, 22, 0.16);
+  color: #ffedd5;
+  transform: translateY(-1px);
+}
+
 .sliderValue {
   font-size: 1.15rem;
   color: #f8fafc;
@@ -136,6 +471,57 @@
 .rangeInput {
   width: 100%;
   accent-color: #f97316;
+}
+
+.sliderHint {
+  font-size: 0.82rem;
+  color: rgba(226, 232, 240, 0.68);
+}
+
+.controlToggleDock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 20px;
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  padding: 0 16px;
+}
+
+.controlToggleButton {
+  appearance: none;
+  pointer-events: auto;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  padding: 12px 18px;
+  background: rgba(2, 6, 23, 0.74);
+  backdrop-filter: blur(18px);
+  box-shadow:
+    0 18px 36px rgba(2, 6, 23, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease,
+    color 160ms ease;
+}
+
+.controlToggleButton:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  transform: translateY(-1px);
+}
+
+.controlToggleButtonActive {
+  border-color: rgba(251, 146, 60, 0.42);
+  background: rgba(154, 52, 18, 0.56);
+  color: #ffedd5;
 }
 
 .placeholder {
@@ -147,7 +533,7 @@
   gap: 14px;
   padding: 24px;
   text-align: center;
-  background: rgba(2, 6, 23, 0.74);
+  background: rgba(2, 6, 23, 0.76);
 }
 
 .placeholder strong {
@@ -161,6 +547,44 @@
   margin: 0 auto;
   line-height: 1.7;
   color: rgba(226, 232, 240, 0.78);
+}
+
+.resultOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  background: rgba(2, 6, 23, 0.44);
+  backdrop-filter: blur(14px);
+}
+
+.resultOverlay strong {
+  font-size: clamp(2.4rem, 6vw, 4.4rem);
+  line-height: 1;
+  letter-spacing: -0.05em;
+  color: #f8fafc;
+}
+
+.resultKicker {
+  font-size: 0.82rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.72);
+}
+
+.resultTitle {
+  font-size: 1.05rem;
+  color: #fde68a;
+}
+
+.resultOverlay p {
+  margin: 0;
+  font-size: 1rem;
+  color: rgba(226, 232, 240, 0.82);
 }
 
 .retryButton {
@@ -185,14 +609,64 @@
     padding: 16px;
   }
 
+  .hudBottom {
+    padding-bottom: 88px;
+  }
+
   .metricCard {
     min-width: 0;
     width: auto;
     padding: 14px 16px;
   }
 
+  .miniMapCard {
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: 1fr;
+  }
+
+  .distanceDisplay {
+    justify-items: flex-start;
+  }
+
+  .miniMapLegend {
+    justify-content: flex-start;
+  }
+
+  .hpCard,
+  .beerCard {
+    min-width: 0;
+    width: auto;
+    padding: 14px 16px;
+  }
+
+  .modeSwitch {
+    width: 100%;
+  }
+
+  .modeButton {
+    flex: 1 1 0;
+  }
+
   .sliderCard {
     width: calc(100vw - 24px);
+  }
+
+  .debugHeader {
+    flex-direction: column;
+  }
+
+  .debugModeButton {
+    width: 100%;
+  }
+
+  .controlToggleDock {
+    bottom: 16px;
+    padding: 0 12px;
+  }
+
+  .controlToggleButton {
+    width: min(100%, 420px);
   }
 
   .metricValue {

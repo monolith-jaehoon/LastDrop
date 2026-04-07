@@ -1,0 +1,90 @@
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ceiling" x1="960" y1="0" x2="960" y2="410" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7A3D17"/>
+      <stop offset="1" stop-color="#3F1D11"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="960" y1="580" x2="960" y2="1080" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#64351B"/>
+      <stop offset="1" stop-color="#26140C"/>
+    </linearGradient>
+    <radialGradient id="hallGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(960 458) rotate(90) scale(400 980)">
+      <stop stop-color="#FFD98A" stop-opacity="0.9"/>
+      <stop offset="0.45" stop-color="#D98A3E" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#0B0610" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="woodDark" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#452312"/>
+      <stop offset="1" stop-color="#2A130C"/>
+    </linearGradient>
+    <linearGradient id="woodLight" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#B36A2E"/>
+      <stop offset="1" stop-color="#6B381C"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1920" height="1080" fill="#09050C"/>
+  <rect width="1920" height="430" fill="url(#ceiling)"/>
+  <rect y="430" width="1920" height="650" fill="url(#floor)"/>
+  <rect width="1920" height="1080" fill="url(#hallGlow)"/>
+
+  <path d="M320 0H0V530L772 428L960 418L1148 428L1920 530V0H1600L1450 122L1240 76L1045 146L960 104L875 146L680 76L470 122L320 0Z" fill="#2B1310"/>
+
+  <path d="M0 448L960 420L1920 448V572L960 520L0 572V448Z" fill="#7F4520" fill-opacity="0.5"/>
+
+  <g opacity="0.85">
+    <path d="M120 104L248 150L376 104L504 150L632 104L760 150L888 104L1016 150L1144 104L1272 150L1400 104L1528 150L1656 104L1784 150V188L1656 142L1528 188L1400 142L1272 188L1144 142L1016 188L888 142L760 188L632 142L504 188L376 142L248 188L120 142V104Z" fill="#F2E8D5"/>
+    <path d="M120 104L248 150L376 104L504 150L632 104L760 150L888 104L1016 150L1144 104L1272 150L1400 104L1528 150L1656 104L1784 150V168L1656 122L1528 168L1400 122L1272 168L1144 122L1016 168L888 122L760 168L632 122L504 168L376 122L248 168L120 122V104Z" fill="#8DC7F2"/>
+    <path d="M120 104L248 150L376 104L504 150L632 104L760 150L888 104L1016 150L1144 104L1272 150L1400 104L1528 150L1656 104L1784 150V148L1656 102L1528 148L1400 102L1272 148L1144 102L1016 148L888 102L760 148L632 102L504 148L376 102L248 148L120 102V104Z" fill="#E78C2F"/>
+  </g>
+
+  <g opacity="0.35">
+    <path d="M215 350L454 306L672 350V564L454 604L215 564V350Z" fill="#2A120E"/>
+    <path d="M702 300L960 254L1218 300V548L960 596L702 548V300Z" fill="#2A120E"/>
+    <path d="M1248 336L1472 296L1704 336V556L1472 598L1248 556V336Z" fill="#2A120E"/>
+  </g>
+
+  <g opacity="0.9">
+    <ellipse cx="960" cy="286" rx="84" ry="34" fill="#F8C768"/>
+    <ellipse cx="960" cy="286" rx="126" ry="22" fill="#FFE2A4" fill-opacity="0.55"/>
+    <ellipse cx="700" cy="316" rx="58" ry="24" fill="#F8C768"/>
+    <ellipse cx="1224" cy="316" rx="58" ry="24" fill="#F8C768"/>
+    <rect x="940" y="286" width="40" height="92" rx="20" fill="#EBC16F"/>
+    <rect x="680" y="316" width="32" height="64" rx="16" fill="#EBC16F"/>
+    <rect x="1208" y="316" width="32" height="64" rx="16" fill="#EBC16F"/>
+  </g>
+
+  <path d="M0 1080L724 662H1196L1920 1080H0Z" fill="#1A0E0C"/>
+  <path d="M372 1080L804 622H1116L1548 1080H372Z" fill="#3C1F14"/>
+  <path d="M700 1080L920 622H1000L1220 1080H700Z" fill="#5A2F18"/>
+
+  <g>
+    <path d="M64 682L504 626L734 730L240 804L64 682Z" fill="url(#woodLight)"/>
+    <path d="M1416 730L1648 626L1858 682L1682 804L1416 730Z" fill="url(#woodLight)"/>
+    <path d="M370 780L736 734L962 866L534 934L370 780Z" fill="url(#woodLight)"/>
+    <path d="M958 866L1184 734L1550 780L1386 934L958 866Z" fill="url(#woodLight)"/>
+  </g>
+
+  <g opacity="0.92">
+    <path d="M162 744H450L594 850H256L162 744Z" fill="url(#woodDark)"/>
+    <path d="M528 900H820L930 1010H640L528 900Z" fill="url(#woodDark)"/>
+    <path d="M1326 744H1758L1664 850H1182L1326 744Z" fill="url(#woodDark)"/>
+    <path d="M1102 900H1394L1282 1010H992L1102 900Z" fill="url(#woodDark)"/>
+  </g>
+
+  <g fill="#150B0B" opacity="0.72">
+    <path d="M254 680C284 634 332 610 392 610C446 610 488 632 520 676L558 782H218L254 680Z"/>
+    <path d="M1320 678C1352 632 1398 610 1458 610C1512 610 1556 634 1586 678L1624 782H1284L1320 678Z"/>
+    <path d="M666 782C700 726 758 696 826 696C890 696 942 724 978 782L1016 944H628L666 782Z"/>
+    <path d="M942 782C978 724 1030 696 1094 696C1162 696 1220 726 1254 782L1292 944H904L942 782Z"/>
+  </g>
+
+  <g opacity="0.75">
+    <ellipse cx="286" cy="736" rx="44" ry="22" fill="#FFD687" fill-opacity="0.22"/>
+    <ellipse cx="1602" cy="736" rx="44" ry="22" fill="#FFD687" fill-opacity="0.22"/>
+    <ellipse cx="804" cy="852" rx="58" ry="30" fill="#FFD687" fill-opacity="0.2"/>
+    <ellipse cx="1116" cy="852" rx="58" ry="30" fill="#FFD687" fill-opacity="0.2"/>
+  </g>
+
+  <rect width="1920" height="1080" fill="url(#hallGlow)" opacity="0.26"/>
+</svg>

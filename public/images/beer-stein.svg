@@ -1,0 +1,31 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="glass" x1="86" y1="54" x2="160" y2="220" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFD468"/>
+      <stop offset="0.52" stop-color="#F1A41B"/>
+      <stop offset="1" stop-color="#B96408"/>
+    </linearGradient>
+    <linearGradient id="glassEdge" x1="72" y1="58" x2="170" y2="226" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF4C8" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#A84D05" stop-opacity="0.8"/>
+    </linearGradient>
+    <linearGradient id="foam" x1="68" y1="36" x2="184" y2="100" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFDF6"/>
+      <stop offset="1" stop-color="#F3E4C2"/>
+    </linearGradient>
+    <linearGradient id="handle" x1="158" y1="86" x2="224" y2="182" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF2BF"/>
+      <stop offset="1" stop-color="#DAA238"/>
+    </linearGradient>
+  </defs>
+
+  <path d="M164 82H188C215 82 232 101 232 129C232 159 214 178 188 178H172" stroke="url(#handle)" stroke-width="22" stroke-linecap="round"/>
+  <path d="M82 58H160C173 58 182 68 182 81V176C182 205 159 228 130 228H118C89 228 66 205 66 176V74C66 65 73 58 82 58Z" fill="url(#glass)"/>
+  <path d="M82 58H160C173 58 182 68 182 81V176C182 205 159 228 130 228H118C89 228 66 205 66 176V74C66 65 73 58 82 58Z" stroke="url(#glassEdge)" stroke-width="10"/>
+  <path d="M90 38C104 24 130 22 146 38C164 18 194 26 202 54C222 52 236 70 234 88C232 107 214 118 197 118H88C65 118 48 98 52 76C56 55 75 40 90 38Z" fill="url(#foam)"/>
+  <path d="M82 82H160V148C160 172 143 190 122 190C101 190 84 172 84 148L82 82Z" fill="#D47A10" fill-opacity="0.3"/>
+  <path d="M96 78C104 114 104 156 100 198" stroke="#FFE7A5" stroke-opacity="0.58" stroke-width="8" stroke-linecap="round"/>
+  <path d="M128 80C134 118 134 158 130 204" stroke="#FFE7A5" stroke-opacity="0.48" stroke-width="7" stroke-linecap="round"/>
+  <path d="M154 84C158 114 158 152 152 190" stroke="#FFE7A5" stroke-opacity="0.34" stroke-width="6" stroke-linecap="round"/>
+  <ellipse cx="120" cy="86" rx="58" ry="18" fill="#FFF7DE" fill-opacity="0.42"/>
+</svg>
