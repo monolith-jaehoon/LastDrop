@@ -76,11 +76,8 @@
 
 .hudTop {
   top: 0;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 24px;
+  display: block;
+  padding: 0;
 }
 
 .hudBottom {
@@ -164,65 +161,31 @@
 }
 
 .miniMapCard {
-  flex: 1 1 320px;
-  min-width: min(360px, 100%);
-  gap: 10px;
-  padding: 14px 16px;
-}
-
-.miniMapHeader {
+  position: absolute;
+  top: 24px;
+  left: 50%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
-}
-
-.miniMapProgressBadge,
-.miniMapGoalBadge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 5px 10px;
-  border-radius: 999px;
-  font-size: 0.76rem;
-  font-weight: 700;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.miniMapProgressBadge {
+  width: min(420px, calc(100vw - 184px));
   color: #f8fafc;
-  background: rgba(14, 116, 144, 0.42);
-  border: 1px solid rgba(103, 232, 249, 0.22);
-}
-
-.miniMapGoalBadge {
-  color: rgba(226, 232, 240, 0.88);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.miniMapTrackRow {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-}
-
-.miniMapEdgeLabel {
-  font-size: 0.74rem;
-  color: rgba(226, 232, 240, 0.56);
+  pointer-events: none;
+  transform: translateX(-50%);
 }
 
 .miniMapTrack {
   position: relative;
   overflow: hidden;
-  width: 100%;
-  height: 10px;
+  flex: 1 1 auto;
+  height: 8px;
   border-radius: 999px;
+  border: 1px solid rgba(125, 211, 252, 0.22);
   background:
-    linear-gradient(180deg, rgba(125, 211, 252, 0.1), rgba(30, 41, 59, 0.22)),
-    rgba(15, 23, 42, 0.46);
+    linear-gradient(180deg, rgba(125, 211, 252, 0.12), rgba(30, 41, 59, 0.22)),
+    rgba(15, 23, 42, 0.34);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 10px 30px rgba(2, 6, 23, 0.24);
 }
 
 .miniMapFill {
@@ -235,50 +198,23 @@
 .miniMapMarker {
   position: absolute;
   top: 50%;
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 999px;
   background: #f8fafc;
   border: 2px solid #f59e0b;
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.14);
   transform: translate(-50%, -50%);
 }
 
-.miniMapFooter {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.distanceDisplay {
-  display: grid;
-  gap: 4px;
-}
-
-.distanceLabel {
-  font-size: 0.74rem;
-  letter-spacing: 0.08em;
-  color: rgba(226, 232, 240, 0.62);
-}
-
-.distanceValue {
-  font-size: clamp(1.2rem, 2.5vw, 1.7rem);
+.miniMapDistance {
+  font-size: clamp(0.95rem, 2vw, 1.1rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
   line-height: 1;
   letter-spacing: -0.04em;
   color: #f8fafc;
-}
-
-.miniMapSummary {
-  display: grid;
-  justify-items: end;
-  gap: 6px;
-}
-
-.distanceSub {
-  font-size: 0.78rem;
-  color: rgba(226, 232, 240, 0.64);
+  white-space: nowrap;
 }
 
 .metricCardActive {
@@ -288,37 +224,45 @@
 }
 
 .hpCard {
-  min-width: 208px;
-  padding: 16px 18px;
-  border-radius: 22px;
+  position: absolute;
+  top: 24px;
+  left: 24px;
   display: grid;
-  gap: 12px;
-  color: #e2e8f0;
-  transition:
-    border-color 160ms ease,
-    background-color 160ms ease;
+  justify-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 0;
+  color: #f8fafc;
+  pointer-events: none;
+  border: 0;
+  background: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
 }
 
 .beerCard {
-  min-width: 236px;
-  padding: 16px 18px;
-  border-radius: 22px;
+  position: absolute;
+  top: 24px;
+  right: 24px;
   display: grid;
-  gap: 12px;
-  color: #e2e8f0;
-  transition:
-    border-color 160ms ease,
-    background-color 160ms ease;
+  justify-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 0;
+  color: #f8fafc;
+  pointer-events: none;
+  border: 0;
+  background: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
 }
 
 .hpCardDanger {
-  border-color: rgba(248, 113, 113, 0.5);
-  background: rgba(69, 10, 10, 0.58);
+  color: #fecaca;
 }
 
 .beerCardDanger {
-  border-color: rgba(251, 191, 36, 0.5);
-  background: rgba(69, 26, 3, 0.62);
+  color: #fde68a;
 }
 
 .metricLabel,
@@ -336,103 +280,95 @@
   color: #f8fafc;
 }
 
-.hpHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+.sideGaugeValue {
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 1;
+  color: #f8fafc;
 }
 
-.hpValue {
-  font-size: 1.35rem;
-  color: #f8fafc;
+.sideGaugeValueAlert {
+  color: #fecaca;
+}
+
+.sideGaugeLabel {
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.72);
 }
 
 .hpBar {
   position: relative;
   overflow: hidden;
-  height: 12px;
+  width: 18px;
+  height: 156px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(15, 23, 42, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 10px 28px rgba(2, 6, 23, 0.24);
 }
 
 .hpFill {
   position: absolute;
   inset: 0;
-  transform-origin: left center;
-  background: linear-gradient(90deg, #fb7185 0%, #f59e0b 48%, #22c55e 100%);
+  transform-origin: center bottom;
+  background: linear-gradient(180deg, #22c55e 0%, #f59e0b 52%, #fb7185 100%);
 }
 
-.beerSummary {
+.hpCardDanger .hpBar {
+  border-color: rgba(248, 113, 113, 0.74);
+  box-shadow:
+    0 0 0 4px rgba(248, 113, 113, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.beerGaugeGroup {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.beerTuningRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 8px 10px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.beerTuningLabel {
-  font-size: 0.8rem;
-  color: rgba(226, 232, 240, 0.72);
-}
-
-.beerTuningValue {
-  font-size: 1rem;
-  color: #fde68a;
-  text-align: right;
-}
-
-.beerCupGroup {
-  display: grid;
-  gap: 6px;
-}
-
-.beerCupRow {
-  display: grid;
-  grid-template-columns: 48px minmax(96px, 1fr) auto;
-  align-items: center;
+  align-items: flex-end;
   gap: 10px;
-  color: rgba(226, 232, 240, 0.78);
-  font-size: 0.86rem;
+}
+
+.beerGauge {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
 }
 
 .beerTrack {
   position: relative;
   overflow: hidden;
-  height: 10px;
+  width: 16px;
+  height: 132px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(15, 23, 42, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 10px 28px rgba(2, 6, 23, 0.24);
 }
 
 .beerLiquid {
   position: absolute;
   inset: 0;
-  transform-origin: left center;
-  background: linear-gradient(90deg, #fde68a 0%, #f59e0b 52%, #b45309 100%);
+  transform-origin: center bottom;
+  background: linear-gradient(180deg, #fde68a 0%, #f59e0b 42%, #92400e 100%);
 }
 
-.beerCupValue {
-  font-size: 0.9rem;
-  color: #f8fafc;
+.beerTrackDanger {
+  border-color: rgba(248, 113, 113, 0.92);
+  box-shadow:
+    0 0 0 4px rgba(248, 113, 113, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-.beerCupMeta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding-left: 58px;
-  font-size: 0.76rem;
-  color: rgba(226, 232, 240, 0.64);
+.beerGaugeLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(226, 232, 240, 0.7);
 }
 
 .sliderCard {
@@ -616,10 +552,34 @@
   display: grid;
   place-content: center;
   gap: 12px;
-  padding: 24px;
+  padding: 32px;
   text-align: center;
-  background: rgba(2, 6, 23, 0.44);
+  background: rgba(2, 6, 23, 0.52);
   backdrop-filter: blur(14px);
+  isolation: isolate;
+}
+
+.resultOverlay::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(594px, calc(100vw - 64px), calc((100vh - 64px) * 594 / 963));
+  aspect-ratio: 594 / 963;
+  transform: translate(-50%, -50%);
+  background:
+    linear-gradient(180deg, rgba(2, 6, 23, 0.14) 0%, rgba(2, 6, 23, 0.44) 100%),
+    url("/images/result.png") center / contain no-repeat;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 28px 48px rgba(2, 6, 23, 0.42));
+  pointer-events: none;
+  z-index: 0;
+}
+
+.resultOverlay > * {
+  position: relative;
+  z-index: 1;
 }
 
 .resultOverlay strong {
@@ -627,24 +587,6 @@
   line-height: 1;
   letter-spacing: -0.05em;
   color: #f8fafc;
-}
-
-.resultKicker {
-  font-size: 0.82rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: rgba(226, 232, 240, 0.72);
-}
-
-.resultTitle {
-  font-size: 1.05rem;
-  color: #fde68a;
-}
-
-.resultOverlay p {
-  margin: 0;
-  font-size: 1rem;
-  color: rgba(226, 232, 240, 0.82);
 }
 
 .retryButton {
@@ -664,13 +606,8 @@
 }
 
 @media (max-width: 640px) {
-  .hudTop,
   .hudBottom {
-    padding: 16px;
-  }
-
-  .hudBottom {
-    padding-bottom: 88px;
+    padding: 16px 16px 88px;
   }
 
   .metricCard {
@@ -680,24 +617,37 @@
   }
 
   .miniMapCard {
-    width: 100%;
+    top: 16px;
+    width: min(236px, calc(100vw - 128px));
     min-width: 0;
   }
 
-  .miniMapHeader,
-  .miniMapFooter {
-    align-items: flex-start;
+  .miniMapDistance {
+    font-size: 0.9rem;
   }
 
-  .miniMapSummary {
-    justify-items: flex-start;
+  .hpCard {
+    top: 16px;
+    left: 16px;
   }
 
-  .hpCard,
   .beerCard {
-    min-width: 0;
-    width: auto;
-    padding: 14px 16px;
+    top: 16px;
+    right: 16px;
+  }
+
+  .sideGaugeValue {
+    font-size: 0.92rem;
+  }
+
+  .hpBar {
+    width: 16px;
+    height: 120px;
+  }
+
+  .beerTrack {
+    width: 14px;
+    height: 108px;
   }
 
   .modeSwitch {

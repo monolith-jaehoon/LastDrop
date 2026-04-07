@@ -101,6 +101,18 @@ type DebugVisibility = {
 };
 
 type CameraState = "idle" | "requesting" | "ready" | "unsupported" | "blocked";
+type PlayerSpriteKey =
+  | "body"
+  | "head"
+  | "leftArm"
+  | "leftHand"
+  | "rightArm"
+  | "rightHand";
+type PlayerSpriteMap = Record<PlayerSpriteKey, HTMLImageElement | null>;
+type SpriteSegmentAnchors = {
+  end: Point;
+  start: Point;
+};
 
 const SAMPLE_WIDTH = 96;
 const SAMPLE_HEIGHT = 54;
@@ -111,9 +123,9 @@ const PLAYER_POSE_HOLD_MS = 360;
 const PLAYER_DAMAGE_COOLDOWN_MS = 280;
 const PLAYER_HIT_FLASH_MS = 200;
 const PLAYER_MAX_HP = 100;
-const PLAYER_TORSO_ALPHA = 0.3;
-const PLAYER_HEAD_ALPHA = 0.3;
-const PLAYER_ARM_ALPHA = 0.5;
+const PLAYER_TORSO_ALPHA = 1;
+const PLAYER_HEAD_ALPHA = 1;
+const PLAYER_ARM_ALPHA = 1;
 const PLAYER_HAND_ALPHA = 1;
 const BEER_DAMAGE = 8;
 const BEER_START_DELAY_MS = 5000;
@@ -142,6 +154,38 @@ const FACE_LANDMARKER_MODEL_PATH = withBasePath("/models/face_landmarker.task");
 const HAND_LANDMARKER_MODEL_PATH = withBasePath("/models/hand_landmarker.task");
 const BEER_SPRITE_PATH = withBasePath("/images/beer-stein.svg");
 const BACKDROP_VIDEO_PATH = withBasePath("/bg.mp4");
+const PLAYER_SPRITE_PATHS = {
+  body: withBasePath("/images/body.png"),
+  head: withBasePath("/images/head.png"),
+  leftArm: withBasePath("/images/left_arm.png"),
+  leftHand: withBasePath("/images/left_hand.png"),
+  rightArm: withBasePath("/images/right_arm.png"),
+  rightHand: withBasePath("/images/right_hand.png"),
+} satisfies Record<PlayerSpriteKey, string>;
+const BODY_SPRITE_SEGMENT_ANCHORS: SpriteSegmentAnchors = {
+  end: { x: 0.5, y: 0.68 },
+  start: { x: 0.5, y: 0.06 },
+};
+const HEAD_SPRITE_SEGMENT_ANCHORS: SpriteSegmentAnchors = {
+  end: { x: 0.5, y: 0.93 },
+  start: { x: 0.5, y: 0.02 },
+};
+const LEFT_ARM_SPRITE_SEGMENT_ANCHORS: SpriteSegmentAnchors = {
+  end: { x: 0.66, y: 0.06 },
+  start: { x: 0.33, y: 0.89 },
+};
+const RIGHT_ARM_SPRITE_SEGMENT_ANCHORS: SpriteSegmentAnchors = {
+  end: { x: 0.33, y: 0.08 },
+  start: { x: 0.64, y: 0.94 },
+};
+const LEFT_HAND_SPRITE_SEGMENT_ANCHORS: SpriteSegmentAnchors = {
+  end: { x: 0.68, y: 0.68 },
+  start: { x: 0.54, y: 0.05 },
+};
+const RIGHT_HAND_SPRITE_SEGMENT_ANCHORS: SpriteSegmentAnchors = {
+  end: { x: 0.32, y: 0.68 },
+  start: { x: 0.52, y: 0.07 },
+};
 const SCENE_LANE_X = [-0.52, -0.34, -0.18, -0.06, 0.06, 0.18, 0.34, 0.52];
 const SCENE_LANE_Y = [-0.28, -0.12, 0.02, 0.18, 0.3];
 const SCENE_OBJECT_HALO_OFFSET_Y_RATIO = -0.3;
@@ -270,6 +314,68 @@ function drawRoundedRect(
   context.lineTo(x, y + clampedRadius);
   context.quadraticCurveTo(x, y, x + clampedRadius, y);
   context.closePath();
+}
+
+function createEmptyPlayerSprites(): PlayerSpriteMap {
+  return {
+    body: null,
+    head: null,
+    leftArm: null,
+    leftHand: null,
+    rightArm: null,
+    rightHand: null,
+  };
+}
+
+function drawSegmentSprite(
+  context: CanvasRenderingContext2D,
+  image: HTMLImageElement | null,
+  start: Point,
+  end: Point,
+  anchors: SpriteSegmentAnchors,
+) {
+  if (!image) {
+    return false;
+  }
+
+  const imageWidth = image.naturalWidth || image.width;
+  const imageHeight = image.naturalHeight || image.height;
+
+  if (!imageWidth || !imageHeight) {
+    return false;
+  }
+
+  const sourceStart = {
+    x: imageWidth * anchors.start.x,
+    y: imageHeight * anchors.start.y,
+  };
+  const sourceEnd = {
+    x: imageWidth * anchors.end.x,
+    y: imageHeight * anchors.end.y,
+  };
+  const sourceDx = sourceEnd.x - sourceStart.x;
+  const sourceDy = sourceEnd.y - sourceStart.y;
+  const sourceLength = Math.hypot(sourceDx, sourceDy);
+  const destinationDx = end.x - start.x;
+  const destinationDy = end.y - start.y;
+  const destinationLength = Math.hypot(destinationDx, destinationDy);
+
+  if (!sourceLength || !destinationLength) {
+    return false;
+  }
+
+  context.save();
+  context.translate(start.x, start.y);
+  context.rotate(
+    Math.atan2(destinationDy, destinationDx) - Math.atan2(sourceDy, sourceDx),
+  );
+  context.scale(destinationLength / sourceLength, destinationLength / sourceLength);
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+  context.drawImage(image, -sourceStart.x, -sourceStart.y, imageWidth, imageHeight);
+  context.restore();
+
+  return true;
 }
 
 function getDistanceBetweenLandmarks(
@@ -1319,9 +1425,11 @@ function drawPlayerOverlay(
   width: number,
   height: number,
   playerPose: PlayerPose | null,
+  playerSprites: PlayerSpriteMap,
   isHit: boolean,
   gameMode: GameMode,
   cupFill: CupFillState,
+  showCupSpillEffect: boolean,
   timestamp: number,
   debugOverlay: DebugOverlayState | null,
   debugVisibility: DebugVisibility | null,
@@ -1345,9 +1453,12 @@ function drawPlayerOverlay(
   const torso = playerPose.torso;
   const neck = playerPose.neck;
   const shoulderSpan = playerPose.shoulders.right.x - playerPose.shoulders.left.x;
+  const averageHipY = (playerPose.hips.left.y + playerPose.hips.right.y) / 2;
 
   context.save();
   context.globalCompositeOperation = "source-over";
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
 
   if (isHit) {
     context.shadowColor = "rgba(248, 113, 113, 0.65)";
@@ -1356,7 +1467,30 @@ function drawPlayerOverlay(
 
   context.save();
   context.globalAlpha = PLAYER_ARM_ALPHA;
-  for (const arm of [playerPose.arms.left, playerPose.arms.right]) {
+  for (const [arm, sprite, anchors] of [
+    [
+      playerPose.arms.left,
+      playerSprites.leftArm,
+      LEFT_ARM_SPRITE_SEGMENT_ANCHORS,
+    ],
+    [
+      playerPose.arms.right,
+      playerSprites.rightArm,
+      RIGHT_ARM_SPRITE_SEGMENT_ANCHORS,
+    ],
+  ] as const) {
+    const didDrawUpperArm = drawSegmentSprite(
+      context,
+      sprite,
+      arm.shoulder,
+      arm.elbow,
+      anchors,
+    );
+
+    if (didDrawUpperArm) {
+      continue;
+    }
+
     drawLine(
       context,
       arm.shoulder,
@@ -1366,22 +1500,8 @@ function drawPlayerOverlay(
     );
     drawLine(
       context,
-      arm.elbow,
-      arm.hand,
-      sleeveColor,
-      head.radius * 0.5,
-    );
-    drawLine(
-      context,
       arm.shoulder,
       arm.elbow,
-      jacketTrim,
-      head.radius * 0.11,
-    );
-    drawLine(
-      context,
-      arm.elbow,
-      arm.hand,
       jacketTrim,
       head.radius * 0.11,
     );
@@ -1391,36 +1511,88 @@ function drawPlayerOverlay(
   context.restore();
 
   context.save();
-  context.globalAlpha = PLAYER_TORSO_ALPHA;
-  context.fillStyle = jacketColor;
-  context.strokeStyle = jacketTrim;
-  context.lineWidth = Math.max(3, head.radius * 0.08);
-  context.beginPath();
-  context.moveTo(playerPose.shoulders.left.x - shoulderSpan * 0.08, playerPose.shoulders.left.y);
-  context.quadraticCurveTo(
-    torso.center.x,
-    torso.center.y - torso.height * 0.55,
-    playerPose.shoulders.right.x + shoulderSpan * 0.08,
-    playerPose.shoulders.right.y,
-  );
-  context.lineTo(playerPose.hips.right.x, playerPose.hips.right.y);
-  context.quadraticCurveTo(
-    torso.center.x,
-    torso.center.y + torso.height * 0.12,
-    playerPose.hips.left.x,
-    playerPose.hips.left.y,
-  );
-  context.closePath();
-  context.fill();
-  context.stroke();
+  context.globalAlpha = PLAYER_ARM_ALPHA;
+  for (const [arm, sprite] of [
+    [playerPose.arms.left, playerSprites.leftHand],
+    [playerPose.arms.right, playerSprites.rightHand],
+  ] as const) {
+    if (sprite) {
+      continue;
+    }
 
-  context.fillStyle = "rgba(255, 247, 220, 0.18)";
-  context.beginPath();
-  context.moveTo(torso.center.x, playerPose.shoulders.left.y + head.radius * 0.18);
-  context.lineTo(torso.center.x + head.radius * 0.16, playerPose.hips.right.y - head.radius * 0.42);
-  context.lineTo(torso.center.x - head.radius * 0.16, playerPose.hips.left.y - head.radius * 0.42);
-  context.closePath();
-  context.fill();
+    drawLine(
+      context,
+      arm.elbow,
+      arm.hand,
+      sleeveColor,
+      head.radius * 0.5,
+    );
+    drawLine(
+      context,
+      arm.elbow,
+      arm.hand,
+      jacketTrim,
+      head.radius * 0.11,
+    );
+  }
+  context.restore();
+
+  context.save();
+  context.globalAlpha = PLAYER_TORSO_ALPHA;
+  const didDrawBody = drawSegmentSprite(
+    context,
+    playerSprites.body,
+    {
+      x: torso.center.x,
+      y: playerPose.shoulders.left.y - head.radius * 0.14,
+    },
+    {
+      x: torso.center.x,
+      y: averageHipY,
+    },
+    BODY_SPRITE_SEGMENT_ANCHORS,
+  );
+
+  if (!didDrawBody) {
+    context.fillStyle = jacketColor;
+    context.strokeStyle = jacketTrim;
+    context.lineWidth = Math.max(3, head.radius * 0.08);
+    context.beginPath();
+    context.moveTo(
+      playerPose.shoulders.left.x - shoulderSpan * 0.08,
+      playerPose.shoulders.left.y,
+    );
+    context.quadraticCurveTo(
+      torso.center.x,
+      torso.center.y - torso.height * 0.55,
+      playerPose.shoulders.right.x + shoulderSpan * 0.08,
+      playerPose.shoulders.right.y,
+    );
+    context.lineTo(playerPose.hips.right.x, playerPose.hips.right.y);
+    context.quadraticCurveTo(
+      torso.center.x,
+      torso.center.y + torso.height * 0.12,
+      playerPose.hips.left.x,
+      playerPose.hips.left.y,
+    );
+    context.closePath();
+    context.fill();
+    context.stroke();
+
+    context.fillStyle = "rgba(255, 247, 220, 0.18)";
+    context.beginPath();
+    context.moveTo(torso.center.x, playerPose.shoulders.left.y + head.radius * 0.18);
+    context.lineTo(
+      torso.center.x + head.radius * 0.16,
+      playerPose.hips.right.y - head.radius * 0.42,
+    );
+    context.lineTo(
+      torso.center.x - head.radius * 0.16,
+      playerPose.hips.left.y - head.radius * 0.42,
+    );
+    context.closePath();
+    context.fill();
+  }
 
   context.fillStyle = skinColor;
   drawRoundedRect(
@@ -1436,53 +1608,76 @@ function drawPlayerOverlay(
 
   context.save();
   context.globalAlpha = PLAYER_HEAD_ALPHA;
-  context.fillStyle = hairColor;
-  context.beginPath();
-  context.ellipse(
-    head.x,
-    head.y,
-    head.radius * 0.94,
-    head.radius * 1.08,
-    0,
-    0,
-    Math.PI * 2,
+  const didDrawHead = drawSegmentSprite(
+    context,
+    playerSprites.head,
+    {
+      x: head.x,
+      y: head.y - head.radius * 1.52,
+    },
+    {
+      x: head.x,
+      y: head.y + head.radius * 1.08,
+    },
+    HEAD_SPRITE_SEGMENT_ANCHORS,
   );
-  context.fill();
 
-  context.fillStyle = "rgba(235, 209, 174, 0.18)";
-  context.beginPath();
-  context.ellipse(
-    head.x,
-    head.y - head.radius * 0.12,
-    head.radius * 0.48,
-    head.radius * 0.64,
-    0,
-    0,
-    Math.PI * 2,
-  );
-  context.fill();
+  if (!didDrawHead) {
+    context.fillStyle = hairColor;
+    context.beginPath();
+    context.ellipse(
+      head.x,
+      head.y,
+      head.radius * 0.94,
+      head.radius * 1.08,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    context.fill();
 
-  context.strokeStyle = "rgba(255, 231, 204, 0.24)";
-  context.lineWidth = head.radius * 0.08;
-  context.beginPath();
-  context.arc(
-    head.x,
-    head.y + head.radius * 0.08,
-    head.radius * 0.44,
-    Math.PI * 1.08,
-    Math.PI * 1.92,
-  );
-  context.stroke();
+    context.fillStyle = "rgba(235, 209, 174, 0.18)";
+    context.beginPath();
+    context.ellipse(
+      head.x,
+      head.y - head.radius * 0.12,
+      head.radius * 0.48,
+      head.radius * 0.64,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    context.fill();
+
+    context.strokeStyle = "rgba(255, 231, 204, 0.24)";
+    context.lineWidth = head.radius * 0.08;
+    context.beginPath();
+    context.arc(
+      head.x,
+      head.y + head.radius * 0.08,
+      head.radius * 0.44,
+      Math.PI * 1.08,
+      Math.PI * 1.92,
+    );
+    context.stroke();
+  }
   context.restore();
 
   if (gameMode === "hard") {
+    const leftSpillRatio = showCupSpillEffect
+      ? getCupTiltSeverity("left", playerPose.arms.left.wristAngle)
+      : 0;
+    const rightSpillRatio = showCupSpillEffect
+      ? getCupTiltSeverity("right", playerPose.arms.right.wristAngle)
+      : 0;
+
     drawBeerCup(
       context,
       playerPose.arms.left,
       "left",
       head.radius,
       cupFill.left,
-      getCupTiltSeverity("left", playerPose.arms.left.wristAngle),
+      leftSpillRatio,
       timestamp,
     );
     drawBeerCup(
@@ -1491,14 +1686,37 @@ function drawPlayerOverlay(
       "right",
       head.radius,
       cupFill.right,
-      getCupTiltSeverity("right", playerPose.arms.right.wristAngle),
+      rightSpillRatio,
       timestamp,
     );
   }
 
   context.save();
   context.globalAlpha = PLAYER_HAND_ALPHA;
-  for (const arm of [playerPose.arms.left, playerPose.arms.right]) {
+  for (const [arm, sprite, anchors] of [
+    [
+      playerPose.arms.left,
+      playerSprites.leftHand,
+      LEFT_HAND_SPRITE_SEGMENT_ANCHORS,
+    ],
+    [
+      playerPose.arms.right,
+      playerSprites.rightHand,
+      RIGHT_HAND_SPRITE_SEGMENT_ANCHORS,
+    ],
+  ] as const) {
+    const didDrawLowerArm = drawSegmentSprite(
+      context,
+      sprite,
+      arm.elbow,
+      arm.hand,
+      anchors,
+    );
+
+    if (didDrawLowerArm) {
+      continue;
+    }
+
     context.save();
     context.translate(arm.hand.x, arm.hand.y);
     context.rotate((-arm.wristAngle * Math.PI) / 180);
@@ -1680,6 +1898,7 @@ export default function Home() {
   const lastFaceVideoTimeRef = useRef(-1);
   const changedPixelRatioRef = useRef(0);
   const beerSpriteRef = useRef<HTMLImageElement | null>(null);
+  const playerSpritesRef = useRef<PlayerSpriteMap>(createEmptyPlayerSprites());
   const playerPoseRef = useRef<PlayerPose | null>(null);
   const playerHpRef = useRef(PLAYER_MAX_HP);
   const playerDamageCooldownUntilRef = useRef(0);
@@ -2333,6 +2552,11 @@ export default function Home() {
       }
 
       roundFinished = gameWonRef.current || gameOverRef.current;
+      const showCupSpillEffect =
+        gameModeRef.current === "hard" &&
+        motionDetectedRef.current &&
+        hasBeerPhaseStarted &&
+        !roundFinished;
 
       if (motionDetectedRef.current && hasBeerPhaseStarted && !roundFinished) {
         const sceneSpeed = getSceneSpeedFromPixelChange(changedPixelRatioRef.current);
@@ -2402,23 +2626,34 @@ export default function Home() {
           overlay.width,
           overlay.height,
           playerPose,
+          playerSpritesRef.current,
           tookDamage || now < playerHitFlashUntilRef.current,
           gameModeRef.current,
           cupFillRef.current,
+          showCupSpillEffect,
           timestamp,
           debugOverlayRef.current,
           debugMode ? debugVisibility : null,
         );
       }
     } else if (overlay) {
+      const showCupSpillEffect =
+        gameModeRef.current === "hard" &&
+        motionDetectedRef.current &&
+        activeElapsedMsRef.current >= BEER_START_DELAY_MS &&
+        !gameWonRef.current &&
+        !gameOverRef.current;
+
       drawPlayerOverlay(
         overlay.context,
         overlay.width,
         overlay.height,
         playerPoseRef.current,
+        playerSpritesRef.current,
         performance.now() < playerHitFlashUntilRef.current,
         gameModeRef.current,
         cupFillRef.current,
+        showCupSpillEffect,
         timestamp,
         debugOverlayRef.current,
         debugMode ? debugVisibility : null,
@@ -2522,6 +2757,38 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    const cleanupCallbacks = (
+      Object.entries(PLAYER_SPRITE_PATHS) as Array<[PlayerSpriteKey, string]>
+    ).map(([key, source]) => {
+      const sprite = new window.Image();
+      const markReady = () => {
+        playerSpritesRef.current[key] = sprite;
+      };
+
+      sprite.decoding = "async";
+      sprite.src = source;
+
+      if (sprite.complete) {
+        markReady();
+      } else {
+        sprite.addEventListener("load", markReady);
+      }
+
+      return () => {
+        sprite.removeEventListener("load", markReady);
+
+        if (playerSpritesRef.current[key] === sprite) {
+          playerSpritesRef.current[key] = null;
+        }
+      };
+    });
+
+    return () => {
+      cleanupCallbacks.forEach((cleanup) => cleanup());
+    };
+  }, []);
+
+  useEffect(() => {
     sceneFrameRequestRef.current = requestAnimationFrame(renderSceneFrameRef.current);
     void startCameraRef.current();
 
@@ -2547,17 +2814,17 @@ export default function Home() {
 
   const showPlaceholder = cameraState !== "ready";
   const currentPlayerPose = playerPoseRef.current;
-  const leftCupSafeRange = getCupSafeRange("left");
-  const rightCupSafeRange = getCupSafeRange("right");
   const leftCupAngle = currentPlayerPose?.arms.left.wristAngle ?? null;
   const rightCupAngle = currentPlayerPose?.arms.right.wristAngle ?? null;
   const leftCupUnsafeDelta =
     leftCupAngle === null ? null : getCupUnsafeDelta("left", leftCupAngle);
   const rightCupUnsafeDelta =
     rightCupAngle === null ? null : getCupUnsafeDelta("right", rightCupAngle);
+  const isLeftCupSpilling = leftCupUnsafeDelta !== null && leftCupUnsafeDelta > 0;
+  const isRightCupSpilling = rightCupUnsafeDelta !== null && rightCupUnsafeDelta > 0;
+  const isBeerSpilling = isLeftCupSpilling || isRightCupSpilling;
   const fatigueRatio = Math.max(0, Math.min(100, playerHp)) / PLAYER_MAX_HP;
-  const totalBeerRemainingRatio = getCombinedCupFill(cupFill);
-  const totalBeerRemainingPercent = Math.round(totalBeerRemainingRatio * 100);
+  const totalBeerRemainingPercent = Math.round(getCombinedCupFill(cupFill) * 100);
   const remainingFatiguePercent = Math.round(fatigueRatio * 100);
   const finalHardModeResult =
     hardModeResult ?? getHardModeResult(cupFill, playerHp / PLAYER_MAX_HP);
@@ -2567,10 +2834,6 @@ export default function Home() {
   const enabledDebugLayerCount = Object.values(debugVisibility).filter(Boolean).length;
   const distanceProgressRatio = clamp(activeElapsedMs / Math.max(goalDurationMs, 1), 0, 1);
   const distanceProgressPercent = Math.round(distanceProgressRatio * 100);
-  const currentCoordinateLabel = `x = ${distanceValue}`;
-  const remainingDistanceValue = formatDistanceMeters(
-    Math.max(goalDurationMs - activeElapsedMs, 0),
-  );
 
   return (
     <main className={styles.page}>
@@ -2594,129 +2857,84 @@ export default function Home() {
           aria-hidden="true"
         />
         <div className={styles.hudTop}>
-          <div className={`${styles.metricCard} ${styles.miniMapCard}`}>
-            <div className={styles.miniMapHeader}>
-              <span className={styles.metricLabel}>이동 미니맵</span>
-              <span className={styles.miniMapProgressBadge}>
-                진행 {distanceProgressPercent}%
-              </span>
-            </div>
-            <div className={styles.miniMapTrackRow}>
-              <span className={styles.miniMapEdgeLabel}>0m</span>
-              <div className={styles.miniMapTrack} aria-hidden="true">
-                <div
-                  className={styles.miniMapFill}
-                  style={{ transform: `scaleX(${distanceProgressRatio})` }}
-                />
-                <div
-                  className={styles.miniMapMarker}
-                  style={{ left: `${(distanceProgressRatio * 100).toFixed(1)}%` }}
-                />
-              </div>
-              <span className={styles.miniMapEdgeLabel}>{goalDistanceMeters}m</span>
-            </div>
-            <div className={styles.miniMapFooter}>
-              <div className={styles.distanceDisplay}>
-                <span className={styles.distanceLabel}>현재 좌표</span>
-                <strong className={styles.distanceValue}>{currentCoordinateLabel}</strong>
-              </div>
-              <div className={styles.miniMapSummary}>
-                <span className={styles.miniMapGoalBadge}>목표 {goalDistanceMeters}m</span>
-                <span className={styles.distanceSub}>남은 {remainingDistanceValue}</span>
-              </div>
-            </div>
-          </div>
           <div
             className={`${styles.hpCard} ${
               playerHp <= 30 ? styles.hpCardDanger : ""
             }`}
           >
-            <div className={styles.hpHeader}>
-              <span className={styles.metricLabel}>피로도</span>
-              <strong className={styles.hpValue}>{remainingFatiguePercent}%</strong>
-            </div>
-            <div className={styles.hpBar}>
+            <strong className={styles.sideGaugeValue}>{remainingFatiguePercent}%</strong>
+            <div className={styles.hpBar} aria-hidden="true">
               <div
                 className={styles.hpFill}
                 style={{
-                  transform: `scaleX(${fatigueRatio})`,
+                  transform: `scaleY(${fatigueRatio})`,
                 }}
               />
             </div>
+            <span className={styles.sideGaugeLabel}>피로도</span>
+          </div>
+          <div
+            className={styles.miniMapCard}
+            aria-label={`이동 거리 ${distanceValue}, 목표 ${goalDistanceMeters}m, 진행 ${distanceProgressPercent}%`}
+          >
+            <div className={styles.miniMapTrack} aria-hidden="true">
+              <div
+                className={styles.miniMapFill}
+                style={{ transform: `scaleX(${distanceProgressRatio})` }}
+              />
+              <div
+                className={styles.miniMapMarker}
+                style={{ left: `${(distanceProgressRatio * 100).toFixed(1)}%` }}
+              />
+            </div>
+            <strong className={styles.miniMapDistance}>{distanceValue}</strong>
           </div>
           {gameMode === "hard" && (
             <div
               className={`${styles.beerCard} ${
-                totalBeerRemainingRatio <= CUP_FILL_WARNING_RATIO
+                isBeerSpilling || totalBeerRemainingPercent <= CUP_FILL_WARNING_RATIO * 100
                   ? styles.beerCardDanger
                   : ""
               }`}
             >
-              <div className={styles.beerSummary}>
-                <span className={styles.metricLabel}>남은 맥주량</span>
-                <strong className={styles.hpValue}>{totalBeerRemainingPercent}%</strong>
-              </div>
-              <div className={styles.beerTuningRow}>
-                <span className={styles.beerTuningLabel}>안전 각도 범위</span>
-                <strong className={styles.beerTuningValue}>
-                  L {leftCupSafeRange.min}°~{leftCupSafeRange.max}° / R{" "}
-                  {rightCupSafeRange.min}°~{rightCupSafeRange.max}°
-                </strong>
-              </div>
-              <div className={styles.beerCupGroup}>
-                <div className={styles.beerCupRow}>
-                  <span>왼손</span>
-                  <div className={styles.beerTrack}>
+              <strong
+                className={`${styles.sideGaugeValue} ${
+                  isBeerSpilling ? styles.sideGaugeValueAlert : ""
+                }`}
+              >
+                {totalBeerRemainingPercent}%
+              </strong>
+              <div className={styles.beerGaugeGroup}>
+                <div className={styles.beerGauge}>
+                  <div
+                    className={`${styles.beerTrack} ${
+                      isLeftCupSpilling ? styles.beerTrackDanger : ""
+                    }`}
+                    aria-hidden="true"
+                  >
                     <div
                       className={styles.beerLiquid}
-                      style={{ transform: `scaleX(${cupFill.left})` }}
+                      style={{ transform: `scaleY(${cupFill.left})` }}
                     />
                   </div>
-                  <strong className={styles.beerCupValue}>
-                    {Math.round(cupFill.left * 100)}%
-                  </strong>
+                  <span className={styles.beerGaugeLabel}>L</span>
                 </div>
-                <div className={styles.beerCupMeta}>
-                  <span>
-                    각도 {leftCupAngle === null ? "대기중" : formatSignedAngle(leftCupAngle)}
-                  </span>
-                  <span>
-                    범위 이탈{" "}
-                    {leftCupUnsafeDelta === null ? "-" : `${Math.round(leftCupUnsafeDelta)}°`}
-                  </span>
-                  <span>
-                    {leftCupUnsafeDelta !== null && leftCupUnsafeDelta > 0 ? "유출중" : "안전"}
-                  </span>
-                </div>
-              </div>
-              <div className={styles.beerCupGroup}>
-                <div className={styles.beerCupRow}>
-                  <span>오른손</span>
-                  <div className={styles.beerTrack}>
+                <div className={styles.beerGauge}>
+                  <div
+                    className={`${styles.beerTrack} ${
+                      isRightCupSpilling ? styles.beerTrackDanger : ""
+                    }`}
+                    aria-hidden="true"
+                  >
                     <div
                       className={styles.beerLiquid}
-                      style={{ transform: `scaleX(${cupFill.right})` }}
+                      style={{ transform: `scaleY(${cupFill.right})` }}
                     />
                   </div>
-                  <strong className={styles.beerCupValue}>
-                    {Math.round(cupFill.right * 100)}%
-                  </strong>
-                </div>
-                <div className={styles.beerCupMeta}>
-                  <span>
-                    각도 {rightCupAngle === null ? "대기중" : formatSignedAngle(rightCupAngle)}
-                  </span>
-                  <span>
-                    범위 이탈{" "}
-                    {rightCupUnsafeDelta === null ? "-" : `${Math.round(rightCupUnsafeDelta)}°`}
-                  </span>
-                  <span>
-                    {rightCupUnsafeDelta !== null && rightCupUnsafeDelta > 0
-                      ? "유출중"
-                      : "안전"}
-                  </span>
+                  <span className={styles.beerGaugeLabel}>R</span>
                 </div>
               </div>
+              <span className={styles.sideGaugeLabel}>맥주</span>
             </div>
           )}
         </div>
@@ -2900,41 +3118,7 @@ export default function Home() {
         )}
         {(gameWon || gameOver) && (
           <div className={styles.resultOverlay}>
-            {gameWon ? (
-              gameMode === "hard" ? (
-                <>
-                  <span className={styles.resultKicker}>HARD MODE CLEAR</span>
-                  <strong>{finalHardModeResult.grade}</strong>
-                  <p className={styles.resultTitle}>{finalHardModeResult.subtitle}</p>
-                  <p>목표 거리 {goalDistanceMeters}m 완주</p>
-                  <p>
-                    남은 맥주 {finalHardModeResult.beerPercent}% · 남은 피로도{" "}
-                    {finalHardModeResult.fatiguePercent}%
-                  </p>
-                  <p>종합 등급 점수 {finalHardModeResult.scorePercent}점</p>
-                  <p>{finalHardModeResult.message}</p>
-                </>
-              ) : (
-                <>
-                  <span className={styles.resultKicker}>CLEAR</span>
-                  <strong>승리</strong>
-                  <p>움직인 시간 기준 {goalDistanceMeters}m를 이동했습니다.</p>
-                  <p>남은 피로도 {remainingFatiguePercent}%</p>
-                </>
-              )
-            ) : (
-              <>
-                <span className={styles.resultKicker}>GAME OVER</span>
-                <strong>실패</strong>
-                <p>양손 맥주를 모두 흘렸습니다.</p>
-                {gameMode === "hard" && (
-                  <p>
-                    남은 맥주 {totalBeerRemainingPercent}% · 남은 피로도{" "}
-                    {remainingFatiguePercent}%
-                  </p>
-                )}
-              </>
-            )}
+            <strong>{gameWon ? (gameMode === "hard" ? finalHardModeResult.grade : "승리") : "실패"}</strong>
             <button type="button" className={styles.retryButton} onClick={resetGameRound}>
               다시 시작
             </button>
