@@ -9,6 +9,7 @@ type NormalizedLandmark = import("@mediapipe/tasks-vision").NormalizedLandmark;
 type Category = import("@mediapipe/tasks-vision").Category;
 type VisionModule = typeof import("@mediapipe/tasks-vision");
 type GameMode = "normal" | "hard";
+type BossSceneState = "default" | "fail" | "success";
 type Point = {
   x: number;
   y: number;
@@ -21,9 +22,11 @@ type SceneObject = {
   depth: number;
   directionX: number;
   directionY: number;
+  flipX: boolean;
   id: number;
   rotation: number;
   size: number;
+  spriteIndex: number;
   spin: number;
   sway: number;
 };
@@ -37,6 +40,7 @@ type ArmPose = {
   elbow: Point;
   hand: Point;
   handRadius: number;
+  grip: Point;
   isFist: boolean;
   shoulder: Point;
   wristAngle: number;
@@ -72,7 +76,8 @@ type SceneObjectProjection = {
   impactY: number;
   opacity: number;
   scale: number;
-  spriteSize: number;
+  spriteHeight: number;
+  spriteWidth: number;
   x: number;
   y: number;
 };
@@ -123,14 +128,14 @@ const PLAYER_POSE_HOLD_MS = 360;
 const PLAYER_DAMAGE_COOLDOWN_MS = 280;
 const PLAYER_HIT_FLASH_MS = 200;
 const PLAYER_MAX_HP = 100;
-const PLAYER_TORSO_ALPHA = 1;
-const PLAYER_HEAD_ALPHA = 1;
-const PLAYER_ARM_ALPHA = 1;
-const PLAYER_HAND_ALPHA = 1;
+const PLAYER_TORSO_ALPHA = 0.5;
+const PLAYER_HEAD_ALPHA = 0.5;
+const PLAYER_ARM_ALPHA = 0.75;
+const PLAYER_HAND_ALPHA = 0.75;
 const BEER_DAMAGE = 8;
-const BEER_START_DELAY_MS = 5000;
-const BASE_SCENE_OBJECT_COUNT = 14;
-const DEFAULT_BEER_DENSITY = 0.1;
+const BEER_START_DELAY_MS = 0;
+const BASE_SCENE_OBJECT_COUNT = 440;
+const DEFAULT_BEER_DENSITY = 0.3;
 const MIN_BEER_DENSITY = 0.1;
 const MAX_BEER_DENSITY = 2;
 const DEFAULT_GOAL_DISTANCE_METERS = 30;
@@ -147,12 +152,35 @@ const RIGHT_CUP_SAFE_MAX_ANGLE = -15;
 const CUP_SPILL_FULL_TILT_MARGIN = 45;
 const CUP_SPILL_RATE = 0.03;
 const CUP_FILL_WARNING_RATIO = 0.35;
+const BGM_MIN_PLAYBACK_RATE = 0.1;
+const BGM_MAX_PLAYBACK_RATE = 1.18;
+const CROWD_MIN_PLAYBACK_RATE = 0.1;
+const CROWD_MAX_PLAYBACK_RATE = 1.08;
+const REQUIRED_FINAL_BEER_RATIO = 0.8;
+const RESULT_OVERLAY_DELAY_MS = 5000;
+const INTRO_OVERLAY_FADE_DISTANCE_MS = 200;
 const PUBLIC_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const withBasePath = (assetPath: string) => `${PUBLIC_BASE_PATH}${assetPath}`;
 const MEDIAPIPE_WASM_PATH = withBasePath("/mediapipe/wasm");
 const FACE_LANDMARKER_MODEL_PATH = withBasePath("/models/face_landmarker.task");
 const HAND_LANDMARKER_MODEL_PATH = withBasePath("/models/hand_landmarker.task");
-const BEER_SPRITE_PATH = withBasePath("/images/beer-stein.svg");
+const HELD_BEER_SPRITE_PATH = withBasePath("/images/beers.png");
+const BGM_AUDIO_PATH = withBasePath("/images/bgm.mp3");
+const CROWD_AUDIO_PATH = withBasePath("/images/crowd.mp3");
+const CRASH_AUDIO_PATH = withBasePath("/images/crash.mp3");
+const SHOP_NAME_SPRITE_PATH = withBasePath("/images/shop_name.png");
+const START_SPRITE_PATH = withBasePath("/images/start.png");
+const BOSS_SPRITE_PATH = withBasePath("/images/boss-default.png");
+const BOSS_SUCCESS_SPRITE_PATH = withBasePath("/images/boss-success.png");
+const BOSS_FAIL_SPRITE_PATH = withBasePath("/images/boss-fail.png");
+const DWARF_SPRITE_PATHS = [
+  withBasePath("/images/dwarp.png"),
+  withBasePath("/images/dwarp2.png"),
+  withBasePath("/images/dwarp3.png"),
+  withBasePath("/images/dwarp4.png"),
+  withBasePath("/images/dwarp_group1.png"),
+  withBasePath("/images/dwarp_sleep.png"),
+] as const;
 const BACKDROP_VIDEO_PATH = withBasePath("/bg.mp4");
 const PLAYER_SPRITE_PATHS = {
   body: withBasePath("/images/body.png"),
@@ -186,14 +214,11 @@ const RIGHT_HAND_SPRITE_SEGMENT_ANCHORS: SpriteSegmentAnchors = {
   end: { x: 0.32, y: 0.68 },
   start: { x: 0.52, y: 0.07 },
 };
-const SCENE_LANE_X = [-0.52, -0.34, -0.18, -0.06, 0.06, 0.18, 0.34, 0.52];
-const SCENE_LANE_Y = [-0.28, -0.12, 0.02, 0.18, 0.3];
-const SCENE_OBJECT_HALO_OFFSET_Y_RATIO = -0.3;
-const SCENE_OBJECT_HALO_RADIUS_X_RATIO = 0.76;
-const SCENE_OBJECT_HALO_RADIUS_Y_RATIO = 0.9;
-const SCENE_OBJECT_IMPACT_OFFSET_X_RATIO = 0;
-const SCENE_OBJECT_IMPACT_OFFSET_Y_RATIO = -0.3;
-const SCENE_OBJECT_IMPACT_RADIUS_RATIO = 0.15;
+const SCENE_LANE_X = [-0.64, -0.56, -0.48, -0.4, -0.32, -0.24, 0.24, 0.32, 0.4, 0.48, 0.56, 0.64];
+const SCENE_GROUND_BAND_Y = [0.04, 0.1, 0.16, 0.22];
+const SCENE_PATH_CENTER_X_BY_ROW = [-0.2, 0.16, -0.1, 0.18];
+const SCENE_PATH_HALF_WIDTH = 0.18;
+const SCENE_FAR_OBJECT_Y_OFFSET_PX = 10;
 const FACE_LEFT_EYE_INDICES = [33, 133, 159, 145];
 const FACE_RIGHT_EYE_INDICES = [362, 263, 386, 374];
 const FACE_NOSE_INDICES = [1, 4, 168];
@@ -924,18 +949,28 @@ function getMirroredFaceBounds(
 }
 
 function createSceneObject(id: number, depth = 0.02 + Math.random() * 0.1): SceneObject {
-  const laneX = SCENE_LANE_X[Math.floor(Math.random() * SCENE_LANE_X.length)] ?? 0;
-  const laneY = SCENE_LANE_Y[Math.floor(Math.random() * SCENE_LANE_Y.length)] ?? 0;
+  const rowIndex = Math.floor(Math.random() * SCENE_GROUND_BAND_Y.length);
+  const laneY = SCENE_GROUND_BAND_Y[rowIndex] ?? 0.1;
+  const pathCenterX = SCENE_PATH_CENTER_X_BY_ROW[rowIndex] ?? 0;
+  const laneCandidates = SCENE_LANE_X.filter(
+    (laneX) => Math.abs(laneX - pathCenterX) >= SCENE_PATH_HALF_WIDTH,
+  );
+  const laneX =
+    laneCandidates[Math.floor(Math.random() * laneCandidates.length)] ??
+    SCENE_LANE_X[Math.floor(Math.random() * SCENE_LANE_X.length)] ??
+    0;
 
   return {
     alpha: 0.55 + Math.random() * 0.35,
     depth,
-    directionX: clamp(laneX + (Math.random() - 0.5) * 0.1, -0.62, 0.62),
-    directionY: clamp(laneY + (Math.random() - 0.5) * 0.14, -0.36, 0.38),
+    directionX: clamp(laneX + (Math.random() - 0.5) * 0.03, -0.72, 0.72),
+    directionY: clamp(laneY + (Math.random() - 0.5) * 0.04, 0.02, 0.28),
+    flipX: Math.random() > 0.5,
     id,
-    rotation: Math.random() * Math.PI * 2,
-    size: 18 + Math.random() * 16,
-    spin: (0.08 + Math.random() * 0.32) * (Math.random() > 0.5 ? 1 : -1),
+    rotation: 0,
+    size: 72,
+    spriteIndex: Math.floor(Math.random() * DWARF_SPRITE_PATHS.length),
+    spin: 0,
     sway: 0.7 + Math.random() * 1.2,
   };
 }
@@ -959,26 +994,29 @@ function getSceneObjectProjection(
   height: number,
 ): SceneObjectProjection {
   const centerX = width / 2;
-  const centerY = height / 2;
-  const perspective = Math.pow(object.depth, 1.56);
-  const spread = 0.08 + perspective * 0.92;
-  const x = centerX + object.directionX * width * 0.36 * spread;
+  const perspective = Math.pow(object.depth, 1.6);
+  const floorY = height * (0.5 + perspective * 0.42);
+  const x =
+    centerX +
+    object.directionX * width * (0.1 + perspective * 0.56);
   const y =
-    centerY +
-    object.directionY * height * 0.34 * spread +
-    Math.sin(object.rotation * 0.7) * object.sway * perspective * 12;
-  const scale = object.size * (0.55 + perspective * 3.3);
+    floorY +
+    object.directionY * height * 0.08 +
+    Math.sin(object.rotation * 1.2) * object.sway * perspective * 8 +
+    (1 - perspective) * SCENE_FAR_OBJECT_Y_OFFSET_PX;
+  const scale = object.size * (0.16 + perspective * 2.7);
   const opacity = clamp(object.alpha * (0.24 + perspective * 1.2), 0.08, 1);
-  const spriteSize = scale * 2.45;
+  const spriteHeight = scale * 1.92;
+  const spriteWidth = spriteHeight * 0.72;
 
   return {
-    // Match hits to the stein body center instead of the decorative glow below it.
-    impactRadius: Math.max(12, spriteSize * SCENE_OBJECT_IMPACT_RADIUS_RATIO),
-    impactX: x + spriteSize * SCENE_OBJECT_IMPACT_OFFSET_X_RATIO,
-    impactY: y + spriteSize * SCENE_OBJECT_IMPACT_OFFSET_Y_RATIO,
+    impactRadius: spriteWidth * 0.3,
+    impactX: x,
+    impactY: y - spriteHeight * 0.5,
     opacity,
     scale,
-    spriteSize,
+    spriteHeight,
+    spriteWidth,
     x,
     y,
   };
@@ -986,73 +1024,50 @@ function getSceneObjectProjection(
 
 function drawSceneObject(
   context: CanvasRenderingContext2D,
+  object: SceneObject,
   projection: SceneObjectProjection,
-  rotation: number,
-  beerSprite: HTMLImageElement | null,
+  dwarfSprite: HTMLImageElement | null,
 ) {
   context.save();
   context.translate(projection.x, projection.y);
-  context.rotate(rotation);
-  context.globalAlpha = projection.opacity * 0.26;
-  context.fillStyle = "rgba(54, 20, 7, 0.9)";
+  context.rotate(object.rotation);
+  context.globalAlpha = projection.opacity * 0.22;
+  context.fillStyle = "rgba(18, 12, 7, 0.45)";
   context.beginPath();
   context.ellipse(
     0,
-    projection.scale * 0.7,
-    projection.scale * 0.6,
-    projection.scale * 0.16,
+    0,
+    projection.spriteWidth * 0.42,
+    projection.spriteHeight * 0.1,
     0,
     0,
     Math.PI * 2,
   );
   context.fill();
-
-  context.globalAlpha = projection.opacity * 0.14;
-  context.fillStyle = "rgba(255, 203, 116, 1)";
-  context.beginPath();
-  context.ellipse(
-    0,
-    projection.spriteSize * SCENE_OBJECT_HALO_OFFSET_Y_RATIO,
-    projection.scale * SCENE_OBJECT_HALO_RADIUS_X_RATIO,
-    projection.scale * SCENE_OBJECT_HALO_RADIUS_Y_RATIO,
-    0,
-    0,
-    Math.PI * 2,
-  );
-  context.fill();
-
   context.globalAlpha = projection.opacity;
 
-  if (beerSprite) {
+  if (dwarfSprite) {
+    context.scale(object.flipX ? -1 : 1, 1);
     context.drawImage(
-      beerSprite,
-      -projection.spriteSize / 2,
-      -projection.spriteSize * 0.86,
-      projection.spriteSize,
-      projection.spriteSize,
+      dwarfSprite,
+      -projection.spriteWidth / 2,
+      -projection.spriteHeight,
+      projection.spriteWidth,
+      projection.spriteHeight,
     );
   } else {
-    context.fillStyle = "rgba(249, 168, 37, 0.9)";
-    context.strokeStyle = "rgba(255, 243, 191, 0.85)";
-    context.lineWidth = Math.max(1, projection.scale * 0.08);
-    drawRoundedRect(
-      context,
-      -projection.scale * 0.42,
-      -projection.scale * 0.82,
-      projection.scale * 0.84,
-      projection.scale * 1.24,
-      projection.scale * 0.18,
+    context.fillStyle = "rgba(95, 68, 39, 0.82)";
+    context.strokeStyle = "rgba(249, 238, 213, 0.5)";
+    context.lineWidth = Math.max(1, projection.scale * 0.04);
+    context.beginPath();
+    context.roundRect(
+      -projection.spriteWidth * 0.3,
+      -projection.spriteHeight * 0.85,
+      projection.spriteWidth * 0.6,
+      projection.spriteHeight * 0.85,
+      projection.spriteWidth * 0.12,
     );
     context.fill();
-    context.stroke();
-    context.beginPath();
-    context.arc(
-      0,
-      -projection.scale * 0.8,
-      projection.scale * 0.45,
-      Math.PI,
-      Math.PI * 2,
-    );
     context.stroke();
   }
 
@@ -1067,19 +1082,15 @@ function drawBeerCup(
   fillRatio: number,
   spillRatio: number,
   timestamp: number,
+  beerSprite: HTMLImageElement | null,
 ) {
-  const mugWidth = headRadius * 0.84;
-  const mugHeight = headRadius * 1.08;
+  const mugWidth = headRadius * 2.16;
+  const mugHeight = mugWidth * 0.81;
   const anchor = {
-    x: arm.hand.x,
-    y: arm.hand.y - headRadius * 0.08,
+    x: arm.grip.x,
+    y: arm.grip.y,
   };
   const cupAngle = (-arm.wristAngle * Math.PI) / 180;
-  const innerWidth = mugWidth * 0.64;
-  const innerHeight = mugHeight * 0.7;
-  const innerX = -innerWidth / 2;
-  const innerY = -mugHeight * 0.42;
-  const liquidHeight = innerHeight * clamp(fillRatio, 0, 1);
 
   context.save();
   context.translate(anchor.x, anchor.y);
@@ -1087,61 +1098,32 @@ function drawBeerCup(
   context.shadowColor = "rgba(15, 23, 42, 0.24)";
   context.shadowBlur = headRadius * 0.22;
   context.shadowOffsetY = headRadius * 0.08;
-  context.fillStyle = "rgba(255, 248, 238, 0.16)";
-  context.strokeStyle = "rgba(255, 244, 220, 0.78)";
-  context.lineWidth = Math.max(2, headRadius * 0.05);
-  drawRoundedRect(
-    context,
-    -mugWidth / 2,
-    -mugHeight * 0.52,
-    mugWidth,
-    mugHeight * 0.92,
-    mugWidth * 0.16,
-  );
-  context.fill();
-  context.stroke();
 
-  context.beginPath();
-  context.ellipse(
-    (side === "left" ? -1 : 1) * mugWidth * 0.52,
-    -mugHeight * 0.06,
-    mugWidth * 0.2,
-    mugHeight * 0.18,
-    0,
-    0,
-    Math.PI * 2,
-  );
-  context.stroke();
-
-  context.save();
-  drawRoundedRect(
-    context,
-    innerX,
-    innerY,
-    innerWidth,
-    innerHeight,
-    mugWidth * 0.12,
-  );
-  context.clip();
-  context.fillStyle = "rgba(245, 158, 11, 0.9)";
-  context.fillRect(
-    innerX,
-    innerY + innerHeight - liquidHeight,
-    innerWidth,
-    liquidHeight,
-  );
-
-  if (liquidHeight > 0) {
-    context.fillStyle = "rgba(255, 248, 220, 0.85)";
-    context.fillRect(
-      innerX,
-      innerY + innerHeight - liquidHeight - Math.max(2, headRadius * 0.05),
-      innerWidth,
-      Math.max(2, headRadius * 0.05),
+  if (beerSprite) {
+    context.scale(side === "left" ? -1 : 1, 1);
+    context.drawImage(
+      beerSprite,
+      -mugWidth / 2,
+      -mugHeight * 0.72,
+      mugWidth,
+      mugHeight,
     );
+  } else {
+    context.fillStyle = "rgba(255, 248, 238, 0.16)";
+    context.strokeStyle = "rgba(255, 244, 220, 0.78)";
+    context.lineWidth = Math.max(2, headRadius * 0.05);
+    drawRoundedRect(
+      context,
+      -mugWidth / 2,
+      -mugHeight * 0.52,
+      mugWidth,
+      mugHeight * 0.92,
+      mugWidth * 0.16,
+    );
+    context.fill();
+    context.stroke();
   }
 
-  context.restore();
   context.restore();
 
   if (spillRatio <= 0.01 || fillRatio <= 0.01) {
@@ -1220,12 +1202,31 @@ function buildArmPose(
 ) {
   const wristPoint = getMirroredLandmarkPoint(handState?.landmarks[0], width, height);
   const palmPoint = getMirroredLandmarkPoint(handState?.landmarks[9], width, height);
+  const middleFingerSecondJointPoint = getMirroredLandmarkPoint(
+    handState?.landmarks[10],
+    width,
+    height,
+  );
   const hand = wristPoint && palmPoint
     ? {
         x: wristPoint.x * 0.72 + palmPoint.x * 0.28,
         y: wristPoint.y * 0.72 + palmPoint.y * 0.28,
       }
     : fallbackHand;
+  const clampedHand = {
+    x: clamp(hand.x, headRadius, width - headRadius),
+    y: clamp(hand.y, headRadius * 1.2, height - headRadius * 0.7),
+  };
+  const grip = middleFingerSecondJointPoint
+    ? {
+        x: clamp(middleFingerSecondJointPoint.x, headRadius, width - headRadius),
+        y: clamp(
+          middleFingerSecondJointPoint.y,
+          headRadius * 1.2,
+          height - headRadius * 0.7,
+        ),
+      }
+    : clampedHand;
   const dx = hand.x - shoulder.x;
   const dy = hand.y - shoulder.y;
   const distance = Math.hypot(dx, dy) || 1;
@@ -1240,11 +1241,9 @@ function buildArmPose(
 
   return {
     elbow,
-    hand: {
-      x: clamp(hand.x, headRadius, width - headRadius),
-      y: clamp(hand.y, headRadius * 1.2, height - headRadius * 0.7),
-    },
+    hand: clampedHand,
     handRadius: headRadius * (handState?.isFist ? 0.23 : 0.28),
+    grip,
     isFist: handState?.isFist ?? false,
     shoulder,
     wristAngle: handState?.wristAngle ?? (side === "left" ? -34 : 34),
@@ -1381,27 +1380,27 @@ function buildPlayerPose(
     },
     hitZones: [
       {
-        radius: headRadius * 0.72,
+        radius: headRadius * 0.2,
         x: headCenter.x,
         y: headCenter.y,
       },
       {
-        radius: torsoWidth * 0.34,
+        radius: torsoWidth * 0.2,
         x: torsoCenter.x,
         y: torsoCenter.y - torsoHeight * 0.18,
       },
       {
-        radius: torsoWidth * 0.3,
+        radius: torsoWidth * 0.2,
         x: torsoCenter.x,
         y: torsoCenter.y + torsoHeight * 0.18,
       },
       {
-        radius: leftArm.handRadius * 0.92,
+        radius: leftArm.handRadius * 0.2,
         x: leftArm.hand.x,
         y: leftArm.hand.y,
       },
       {
-        radius: rightArm.handRadius * 0.92,
+        radius: rightArm.handRadius * 0.2,
         x: rightArm.hand.x,
         y: rightArm.hand.y,
       },
@@ -1426,6 +1425,7 @@ function drawPlayerOverlay(
   height: number,
   playerPose: PlayerPose | null,
   playerSprites: PlayerSpriteMap,
+  beerSprite: HTMLImageElement | null,
   isHit: boolean,
   gameMode: GameMode,
   cupFill: CupFillState,
@@ -1679,6 +1679,7 @@ function drawPlayerOverlay(
       cupFill.left,
       leftSpillRatio,
       timestamp,
+      beerSprite,
     );
     drawBeerCup(
       context,
@@ -1688,6 +1689,7 @@ function drawPlayerOverlay(
       cupFill.right,
       rightSpillRatio,
       timestamp,
+      beerSprite,
     );
   }
 
@@ -1709,7 +1711,7 @@ function drawPlayerOverlay(
       context,
       sprite,
       arm.elbow,
-      arm.hand,
+      arm.grip,
       anchors,
     );
 
@@ -1718,7 +1720,7 @@ function drawPlayerOverlay(
     }
 
     context.save();
-    context.translate(arm.hand.x, arm.hand.y);
+    context.translate(arm.grip.x, arm.grip.y);
     context.rotate((-arm.wristAngle * Math.PI) / 180);
     context.fillStyle = skinColor;
     context.beginPath();
@@ -1758,7 +1760,14 @@ function drawMotionScene(
   height: number,
   objects: SceneObject[],
   isActive: boolean,
-  beerSprite: HTMLImageElement | null,
+  dwarfSprites: Array<HTMLImageElement | null>,
+  bossSprite: HTMLImageElement | null,
+  distanceProgressRatio: number,
+  introSprites: {
+    shopName: HTMLImageElement | null;
+    start: HTMLImageElement | null;
+  },
+  activeElapsedMs: number,
 ) {
   const centerX = width / 2;
   const centerY = height / 2;
@@ -1821,12 +1830,96 @@ function drawMotionScene(
   const sortedObjects = [...objects].sort((left, right) => left.depth - right.depth);
 
   for (const object of sortedObjects) {
+    const dwarfSprite = dwarfSprites[object.spriteIndex] ?? null;
+
     drawSceneObject(
       context,
+      object,
       getSceneObjectProjection(object, width, height),
-      object.rotation,
-      beerSprite,
+      dwarfSprite,
     );
+  }
+
+  const bossRevealProgress = clamp((distanceProgressRatio - 0.76) / 0.24, 0, 1);
+
+  if (bossSprite && bossRevealProgress > 0) {
+    const bossCenterX = centerX;
+    const bossBaseY = height * (0.72 + bossRevealProgress * 0.18);
+    const bossHeight = height * (0.18 + bossRevealProgress * 0.44);
+    const bossWidth = bossHeight * 0.82;
+
+    context.save();
+    context.globalAlpha = 0.12 + bossRevealProgress * 0.22;
+    context.fillStyle = "rgba(16, 10, 7, 0.72)";
+    context.beginPath();
+    context.ellipse(
+      bossCenterX,
+      bossBaseY,
+      bossWidth * 0.3,
+      bossHeight * 0.06,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    context.fill();
+    context.restore();
+
+    context.save();
+    context.globalAlpha = 0.16 + bossRevealProgress * 0.84;
+    context.shadowColor = "rgba(15, 23, 42, 0.38)";
+    context.shadowBlur = 28 * bossRevealProgress;
+    context.shadowOffsetY = 12 * bossRevealProgress;
+    context.drawImage(
+      bossSprite,
+      bossCenterX - bossWidth / 2,
+      bossBaseY - bossHeight,
+      bossWidth,
+      bossHeight,
+    );
+    context.restore();
+  }
+
+  const introOpacity = 1 - clamp(activeElapsedMs / INTRO_OVERLAY_FADE_DISTANCE_MS, 0, 1);
+
+  if (introOpacity > 0) {
+    context.save();
+    context.globalAlpha = introOpacity;
+
+    const shopNameSprite = introSprites.shopName;
+
+    if (shopNameSprite) {
+      const shopWidth = width * 0.46;
+      const shopHeight =
+        shopWidth * ((shopNameSprite.naturalHeight || shopNameSprite.height || 1) /
+          (shopNameSprite.naturalWidth || shopNameSprite.width || 1));
+
+      context.drawImage(
+        shopNameSprite,
+        centerX - shopWidth / 2,
+        height * 0.1,
+        shopWidth,
+        shopHeight,
+      );
+    }
+
+    const startSprite = introSprites.start;
+
+    if (startSprite) {
+      const startWidth = width * 0.32;
+      const startHeight =
+        startWidth * ((startSprite.naturalHeight || startSprite.height || 1) /
+          (startSprite.naturalWidth || startSprite.width || 1));
+
+      context.drawImage(
+        startSprite,
+        centerX - startWidth / 2,
+        height * 0.58 - startHeight / 2,
+        startWidth,
+        startHeight,
+      );
+    }
+
+    context.restore();
   }
 
   const centerGlow = context.createRadialGradient(
@@ -1875,6 +1968,10 @@ export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const analysisCanvasRef = useRef<HTMLCanvasElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
+  const bgmAudioRef = useRef<HTMLAudioElement | null>(null);
+  const crowdAudioPrimaryRef = useRef<HTMLAudioElement | null>(null);
+  const crowdAudioSecondaryRef = useRef<HTMLAudioElement | null>(null);
+  const crashAudioRef = useRef<HTMLAudioElement | null>(null);
   const sceneContextRef = useRef<CanvasRenderingContext2D | null>(null);
   const analysisContextRef = useRef<CanvasRenderingContext2D | null>(null);
   const overlayContextRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -1898,13 +1995,29 @@ export default function Home() {
   const lastFaceVideoTimeRef = useRef(-1);
   const changedPixelRatioRef = useRef(0);
   const beerSpriteRef = useRef<HTMLImageElement | null>(null);
+  const introSpritesRef = useRef<{
+    shopName: HTMLImageElement | null;
+    start: HTMLImageElement | null;
+  }>({
+    shopName: null,
+    start: null,
+  });
+  const bossSpritesRef = useRef<Record<BossSceneState, HTMLImageElement | null>>({
+    default: null,
+    fail: null,
+    success: null,
+  });
+  const bossSceneStateRef = useRef<BossSceneState>("default");
+  const dwarfSpritesRef = useRef<Array<HTMLImageElement | null>>(
+    Array.from({ length: DWARF_SPRITE_PATHS.length }, () => null),
+  );
   const playerSpritesRef = useRef<PlayerSpriteMap>(createEmptyPlayerSprites());
   const playerPoseRef = useRef<PlayerPose | null>(null);
   const playerHpRef = useRef(PLAYER_MAX_HP);
   const playerDamageCooldownUntilRef = useRef(0);
   const playerHitFlashUntilRef = useRef(0);
   const activeElapsedMsRef = useRef(0);
-  const gameModeRef = useRef<GameMode>("normal");
+  const gameModeRef = useRef<GameMode>("hard");
   const beerDensityRef = useRef(DEFAULT_BEER_DENSITY);
   const cupFillRef = useRef<CupFillState>(createFullCupFill());
   const publishedCupFillRef = useRef<CupFillState>(createFullCupFill());
@@ -1915,11 +2028,14 @@ export default function Home() {
     handStates: [],
   });
   const renderSceneFrameRef = useRef<(timestamp: number) => void>(() => undefined);
+  const endSequenceTimeoutRef = useRef<number | null>(null);
+  const crowdSecondaryStartTimeoutRef = useRef<number | null>(null);
+  const crowdSecondaryEnabledRef = useRef(false);
   const sceneObjectsRef = useRef<SceneObject[]>(
     createSceneObjects(getSceneObjectCount(DEFAULT_BEER_DENSITY), "staggered"),
   );
 
-  const [gameMode, setGameMode] = useState<GameMode>("normal");
+  const [gameMode, setGameMode] = useState<GameMode>("hard");
   const [beerDensity, setBeerDensity] = useState(DEFAULT_BEER_DENSITY);
   const [goalDistanceMeters, setGoalDistanceMeters] = useState(
     DEFAULT_GOAL_DISTANCE_METERS,
@@ -1931,6 +2047,7 @@ export default function Home() {
   const [cupFill, setCupFill] = useState<CupFillState>(createFullCupFill);
   const [hardModeResult, setHardModeResult] = useState<HardModeResult | null>(null);
   const [playerHp, setPlayerHp] = useState(PLAYER_MAX_HP);
+  const [resultOverlayVisible, setResultOverlayVisible] = useState(false);
   const [sensitivity, setSensitivity] = useState(4);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isControlPanelOpen, setIsControlPanelOpen] = useState(false);
@@ -2020,9 +2137,155 @@ export default function Home() {
     context.clearRect(0, 0, canvas.width, canvas.height);
   };
 
+  const clearEndSequenceTimeout = () => {
+    if (endSequenceTimeoutRef.current !== null) {
+      window.clearTimeout(endSequenceTimeoutRef.current);
+      endSequenceTimeoutRef.current = null;
+    }
+  };
+
+  const clearCrowdSecondaryStartTimeout = () => {
+    if (crowdSecondaryStartTimeoutRef.current !== null) {
+      window.clearTimeout(crowdSecondaryStartTimeoutRef.current);
+      crowdSecondaryStartTimeoutRef.current = null;
+    }
+  };
+
+  const stopGameAudio = () => {
+    clearCrowdSecondaryStartTimeout();
+    crowdSecondaryEnabledRef.current = false;
+
+    for (const audio of [
+      bgmAudioRef.current,
+      crowdAudioPrimaryRef.current,
+      crowdAudioSecondaryRef.current,
+    ]) {
+      if (!audio) {
+        continue;
+      }
+
+      audio.pause();
+      audio.currentTime = 0;
+    }
+  };
+
+  const playCrashAudio = () => {
+    const crashAudio = crashAudioRef.current;
+
+    if (!crashAudio) {
+      return;
+    }
+
+    crashAudio.currentTime = 0;
+    void crashAudio.play().catch(() => undefined);
+  };
+
+  const updateGameAudioPlaybackRate = () => {
+    const normalizedMotion =
+      clamp(changedPixelRatioRef.current, 0, SCENE_MOTION_CAP) / SCENE_MOTION_CAP;
+    const bgmPlaybackRate =
+      BGM_MIN_PLAYBACK_RATE +
+      normalizedMotion * (BGM_MAX_PLAYBACK_RATE - BGM_MIN_PLAYBACK_RATE);
+    const crowdPlaybackRate =
+      CROWD_MIN_PLAYBACK_RATE +
+      normalizedMotion * (CROWD_MAX_PLAYBACK_RATE - CROWD_MIN_PLAYBACK_RATE);
+
+    if (bgmAudioRef.current) {
+      bgmAudioRef.current.playbackRate = bgmPlaybackRate;
+    }
+
+    if (crowdAudioPrimaryRef.current) {
+      crowdAudioPrimaryRef.current.playbackRate = crowdPlaybackRate;
+    }
+
+    if (crowdAudioSecondaryRef.current) {
+      crowdAudioSecondaryRef.current.playbackRate = crowdPlaybackRate;
+    }
+  };
+
+  const syncGameAudioPlayback = (shouldPlay: boolean) => {
+    updateGameAudioPlaybackRate();
+
+    for (const [audio, isSecondary] of [
+      [bgmAudioRef.current, false],
+      [crowdAudioPrimaryRef.current, false],
+      [crowdAudioSecondaryRef.current, true],
+    ] as const) {
+      if (!audio) {
+        continue;
+      }
+
+      if (isSecondary && !crowdSecondaryEnabledRef.current) {
+        continue;
+      }
+
+      if (shouldPlay) {
+        if (audio.paused) {
+          void audio.play().catch(() => undefined);
+        }
+
+        continue;
+      }
+
+      if (
+        !gameWonRef.current &&
+        !gameOverRef.current &&
+        analysisActiveRef.current
+      ) {
+        if (audio.paused) {
+          void audio.play().catch(() => undefined);
+        }
+
+        continue;
+      }
+
+      if (!audio.paused) {
+        audio.pause();
+      }
+    }
+  };
+
+  const startGameAudio = () => {
+    stopGameAudio();
+
+    const bgmAudio = bgmAudioRef.current;
+    const crowdAudioPrimary = crowdAudioPrimaryRef.current;
+    const crowdAudioSecondary = crowdAudioSecondaryRef.current;
+
+    if (bgmAudio) {
+      bgmAudio.currentTime = 0;
+    }
+
+    if (crowdAudioPrimary) {
+      crowdAudioPrimary.currentTime = 0;
+    }
+
+    if (crowdAudioSecondary) {
+      crowdAudioSecondary.currentTime = 0;
+    }
+
+    crowdSecondaryStartTimeoutRef.current = window.setTimeout(() => {
+      crowdSecondaryStartTimeoutRef.current = null;
+      crowdSecondaryEnabledRef.current = true;
+
+      if (
+        !crowdAudioSecondaryRef.current ||
+        gameWonRef.current ||
+        gameOverRef.current
+      ) {
+        return;
+      }
+
+      if (motionDetectedRef.current) {
+        void crowdAudioSecondaryRef.current.play().catch(() => undefined);
+      }
+    }, 5000);
+  };
+
   const resetPlayerState = () => {
     const fullCupFill = createFullCupFill();
 
+    clearEndSequenceTimeout();
     playerPoseRef.current = null;
     debugOverlayRef.current = {
       faceLandmarks: null,
@@ -2034,6 +2297,7 @@ export default function Home() {
     activeElapsedMsRef.current = 0;
     gameWonRef.current = false;
     gameOverRef.current = false;
+    bossSceneStateRef.current = "default";
     cupFillRef.current = fullCupFill;
     publishedCupFillRef.current = fullCupFill;
     lastPlayerSeenAtRef.current = 0;
@@ -2041,12 +2305,49 @@ export default function Home() {
     setActiveElapsedMs(0);
     setGameWon(false);
     setGameOver(false);
+    setResultOverlayVisible(false);
     setCupFill(fullCupFill);
     setHardModeResult(null);
   };
 
+  const queueResultOverlay = () => {
+    clearEndSequenceTimeout();
+    endSequenceTimeoutRef.current = window.setTimeout(() => {
+      setResultOverlayVisible(true);
+      endSequenceTimeoutRef.current = null;
+    }, RESULT_OVERLAY_DELAY_MS);
+  };
+
+  const finishRoundAtGoal = () => {
+    const remainingBeerRatio = getCombinedCupFill(cupFillRef.current);
+    const didWin =
+      gameModeRef.current !== "hard" || remainingBeerRatio >= REQUIRED_FINAL_BEER_RATIO;
+
+    gameWonRef.current = didWin;
+    gameOverRef.current = !didWin;
+    motionDetectedRef.current = false;
+    bossSceneStateRef.current = didWin ? "success" : "fail";
+    syncBackdropPlayback(false);
+    setGameWon(didWin);
+    setGameOver(!didWin);
+    setResultOverlayVisible(false);
+
+    if (gameModeRef.current === "hard") {
+      setHardModeResult(
+        getHardModeResult(
+          cupFillRef.current,
+          playerHpRef.current / PLAYER_MAX_HP,
+        ),
+      );
+    }
+
+    queueResultOverlay();
+  };
+
   const syncBackdropPlayback = (shouldPlay: boolean) => {
     const backdropVideo = backdropVideoRef.current;
+
+    syncGameAudioPlayback(shouldPlay);
 
     if (!backdropVideo) {
       return;
@@ -2095,6 +2396,7 @@ export default function Home() {
     motionDetectedRef.current = false;
     changedPixelRatioRef.current = 0;
     syncBackdropPlayback(false);
+    startGameAudio();
     sceneObjectsRef.current = createSceneObjects(
       getSceneObjectCount(beerDensityRef.current),
       "staggered",
@@ -2250,6 +2552,7 @@ export default function Home() {
     motionDetectedRef.current = false;
     changedPixelRatioRef.current = 0;
     syncBackdropPlayback(false);
+    stopGameAudio();
     sceneObjectsRef.current = createSceneObjects(
       getSceneObjectCount(beerDensityRef.current),
       "staggered",
@@ -2354,6 +2657,14 @@ export default function Home() {
     const now = Date.now();
 
     changedPixelRatioRef.current = roundedRatio;
+    updateGameAudioPlaybackRate();
+
+    if (gameWonRef.current || gameOverRef.current) {
+      previousFrameRef.current = currentFrame;
+      motionDetectedRef.current = false;
+      queueNextAnalysis();
+      return;
+    }
 
     const faceLandmarker = faceLandmarkerRef.current;
     const handLandmarker = handLandmarkerRef.current;
@@ -2403,11 +2714,7 @@ export default function Home() {
       if (nextPlayerPose) {
         playerPoseRef.current = nextPlayerPose;
         lastPlayerSeenAtRef.current = now;
-      } else if (now - lastPlayerSeenAtRef.current > PLAYER_POSE_HOLD_MS) {
-        playerPoseRef.current = null;
       }
-    } else if (now - lastPlayerSeenAtRef.current > PLAYER_POSE_HOLD_MS) {
-      playerPoseRef.current = null;
     }
 
     if (combinedScore >= sensitivityRef.current && personVisible) {
@@ -2477,18 +2784,7 @@ export default function Home() {
         !gameOverRef.current &&
         nextElapsedMs >= goalDurationMs
       ) {
-        gameWonRef.current = true;
-        syncBackdropPlayback(false);
-        setGameWon(true);
-
-        if (gameModeRef.current === "hard") {
-          setHardModeResult(
-            getHardModeResult(
-              cupFillRef.current,
-              playerHpRef.current / PLAYER_MAX_HP,
-            ),
-          );
-        }
+        finishRoundAtGoal();
       }
 
       const hasBeerPhaseStarted = nextElapsedMs >= BEER_START_DELAY_MS;
@@ -2546,8 +2842,10 @@ export default function Home() {
 
         if (getCombinedCupFill(nextCupFill) <= 0.01) {
           gameOverRef.current = true;
+          bossSceneStateRef.current = "fail";
           syncBackdropPlayback(false);
           setGameOver(true);
+          setResultOverlayVisible(true);
         }
       }
 
@@ -2571,7 +2869,6 @@ export default function Home() {
           return {
             ...object,
             depth: nextDepth,
-            rotation: object.rotation + deltaSeconds * object.spin,
           };
         });
       }
@@ -2592,7 +2889,7 @@ export default function Home() {
         const projection = getSceneObjectProjection(object, width, height);
 
         if (
-          projection.spriteSize < playerPose.head.radius * 1.2 ||
+          projection.spriteHeight < playerPose.head.radius * 1.4 ||
           !doesProjectionHitPlayer(projection, playerPose)
         ) {
           return object;
@@ -2605,6 +2902,7 @@ export default function Home() {
 
         playerHpRef.current = nextHp;
         setPlayerHp(nextHp);
+        playCrashAudio();
 
         return createSceneObject(object.id);
       });
@@ -2617,7 +2915,11 @@ export default function Home() {
         height,
         hasBeerPhaseStarted ? sceneObjectsRef.current : [],
         motionDetectedRef.current,
-        beerSpriteRef.current,
+        dwarfSpritesRef.current,
+        bossSpritesRef.current[bossSceneStateRef.current],
+        clamp(nextElapsedMs / Math.max(goalDurationMs, 1), 0, 1),
+        introSpritesRef.current,
+        nextElapsedMs,
       );
 
       if (overlay) {
@@ -2625,8 +2927,9 @@ export default function Home() {
           overlay.context,
           overlay.width,
           overlay.height,
-          playerPose,
+          roundFinished ? null : playerPose,
           playerSpritesRef.current,
+          beerSpriteRef.current,
           tookDamage || now < playerHitFlashUntilRef.current,
           gameModeRef.current,
           cupFillRef.current,
@@ -2648,8 +2951,9 @@ export default function Home() {
         overlay.context,
         overlay.width,
         overlay.height,
-        playerPoseRef.current,
+        gameWonRef.current || gameOverRef.current ? null : playerPoseRef.current,
         playerSpritesRef.current,
+        beerSpriteRef.current,
         performance.now() < playerHitFlashUntilRef.current,
         gameModeRef.current,
         cupFillRef.current,
@@ -2705,6 +3009,7 @@ export default function Home() {
       changedPixelRatioRef.current = 0;
       syncBackdropPlayback(false);
       analysisActiveRef.current = true;
+      startGameAudio();
       sceneObjectsRef.current = createSceneObjects(
         getSceneObjectCount(beerDensityRef.current),
         "staggered",
@@ -2733,13 +3038,80 @@ export default function Home() {
   }, [beerDensity]);
 
   useEffect(() => {
+    const bgmAudio = new window.Audio(BGM_AUDIO_PATH);
+    bgmAudio.loop = true;
+    bgmAudio.preload = "auto";
+    bgmAudioRef.current = bgmAudio;
+
+    const crowdAudioPrimary = new window.Audio(CROWD_AUDIO_PATH);
+    crowdAudioPrimary.loop = true;
+    crowdAudioPrimary.preload = "auto";
+    crowdAudioPrimary.volume = 0.78;
+    crowdAudioPrimaryRef.current = crowdAudioPrimary;
+
+    const crowdAudioSecondary = new window.Audio(CROWD_AUDIO_PATH);
+    crowdAudioSecondary.loop = true;
+    crowdAudioSecondary.preload = "auto";
+    crowdAudioSecondary.volume = 0.58;
+    crowdAudioSecondaryRef.current = crowdAudioSecondary;
+
+    const crashAudio = new window.Audio(CRASH_AUDIO_PATH);
+    crashAudio.preload = "auto";
+    crashAudio.volume = 0.9;
+    crashAudioRef.current = crashAudio;
+
+    return () => {
+      stopGameAudio();
+      bgmAudioRef.current = null;
+      crowdAudioPrimaryRef.current = null;
+      crowdAudioSecondaryRef.current = null;
+      crashAudioRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const cleanupCallbacks = (
+      [
+        ["shopName", SHOP_NAME_SPRITE_PATH],
+        ["start", START_SPRITE_PATH],
+      ] as const
+    ).map(([key, source]) => {
+      const sprite = new window.Image();
+      const markReady = () => {
+        introSpritesRef.current[key] = sprite;
+      };
+
+      sprite.decoding = "async";
+      sprite.src = source;
+
+      if (sprite.complete) {
+        markReady();
+      } else {
+        sprite.addEventListener("load", markReady);
+      }
+
+      return () => {
+        sprite.removeEventListener("load", markReady);
+
+        if (introSpritesRef.current[key] === sprite) {
+          introSpritesRef.current[key] = null;
+        }
+      };
+    });
+
+    return () => {
+      cleanupCallbacks.forEach((cleanup) => cleanup());
+    };
+  }, []);
+
+  useEffect(() => {
     const beerSprite = new window.Image();
     const markReady = () => {
       beerSpriteRef.current = beerSprite;
     };
 
     beerSprite.decoding = "async";
-    beerSprite.src = BEER_SPRITE_PATH;
+    beerSprite.src = HELD_BEER_SPRITE_PATH;
 
     if (beerSprite.complete) {
       markReady();
@@ -2753,6 +3125,72 @@ export default function Home() {
       if (beerSpriteRef.current === beerSprite) {
         beerSpriteRef.current = null;
       }
+    };
+  }, []);
+
+  useEffect(() => {
+    const cleanupCallbacks = (
+      [
+        ["default", BOSS_SPRITE_PATH],
+        ["success", BOSS_SUCCESS_SPRITE_PATH],
+        ["fail", BOSS_FAIL_SPRITE_PATH],
+      ] as const
+    ).map(([key, source]) => {
+      const sprite = new window.Image();
+      const markReady = () => {
+        bossSpritesRef.current[key] = sprite;
+      };
+
+      sprite.decoding = "async";
+      sprite.src = source;
+
+      if (sprite.complete) {
+        markReady();
+      } else {
+        sprite.addEventListener("load", markReady);
+      }
+
+      return () => {
+        sprite.removeEventListener("load", markReady);
+
+        if (bossSpritesRef.current[key] === sprite) {
+          bossSpritesRef.current[key] = null;
+        }
+      };
+    });
+
+    return () => {
+      cleanupCallbacks.forEach((cleanup) => cleanup());
+    };
+  }, []);
+
+  useEffect(() => {
+    const cleanupCallbacks = DWARF_SPRITE_PATHS.map((source, index) => {
+      const sprite = new window.Image();
+      const markReady = () => {
+        dwarfSpritesRef.current[index] = sprite;
+      };
+
+      sprite.decoding = "async";
+      sprite.src = source;
+
+      if (sprite.complete) {
+        markReady();
+      } else {
+        sprite.addEventListener("load", markReady);
+      }
+
+      return () => {
+        sprite.removeEventListener("load", markReady);
+
+        if (dwarfSpritesRef.current[index] === sprite) {
+          dwarfSpritesRef.current[index] = null;
+        }
+      };
+    });
+
+    return () => {
+      cleanupCallbacks.forEach((cleanup) => cleanup());
     };
   }, []);
 
@@ -2807,6 +3245,9 @@ export default function Home() {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
 
+      clearEndSequenceTimeout();
+      clearCrowdSecondaryStartTimeout();
+      stopGameAudio();
       faceLandmarkerRef.current?.close();
       handLandmarkerRef.current?.close();
     };
@@ -3116,7 +3557,7 @@ export default function Home() {
             )}
           </div>
         )}
-        {(gameWon || gameOver) && (
+        {resultOverlayVisible && (gameWon || gameOver) && (
           <div className={styles.resultOverlay}>
             <strong>{gameWon ? (gameMode === "hard" ? finalHardModeResult.grade : "승리") : "실패"}</strong>
             <button type="button" className={styles.retryButton} onClick={resetGameRound}>
